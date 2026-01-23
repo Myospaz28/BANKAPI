@@ -46,7 +46,7 @@ export default function Layout2({ children }) {
           </Suspense>
 
           {/* FOOTER SECTION */}
-          <Footer />
+          {/* <Footer /> */}
         </div>
       </div>
 

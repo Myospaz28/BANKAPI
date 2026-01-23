@@ -1,53 +1,26 @@
-import axios from "axios";
+import api from "./api";
 import localStorageService from "./localStorageService";
 
 class JwtAuthService {
-  user = {
-    age: 25,
-    userId: "1",
-    role: "ADMIN",
-    displayName: "Watson Joyce",
-    email: "watsonjoyce@gmail.com",
-    photoURL: "/assets/images/face-7.jpg",
-    token: "faslkhfh423oiu4h4kj432rkj23h432u49ufjaklj423h4jkhkjh"
-  };
-
-  async loginWithEmailAndPassword({ email, password }) {
-    if (email === "watson@example.com") {
-      const data = await new Promise((resolve) => {
-        setTimeout(() => resolve(this.user), 1000);
-      });
-
-      this.setSession(data.token);
-      this.setUser(data);
-      return data;
-    } else {
-      throw new Error("Wrong email or password");
-    }
-  }
-
-  async loginWithToken() {
-    const data = await new Promise((resolve) => {
-      setTimeout(() => resolve(this.user), 1000);
+  async loginWithUsernameAndPassword({ username, password }) {
+    const res = await api.post("/auth/signin", {
+      username,
+      password
     });
 
-    this.setSession(data.token);
-    this.setUser(data);
-    return data;
-  }
+    this.setSession(res.data.token);
+    this.setUser(res.data);
 
-  logout() {
-    this.setSession(null);
-    this.removeUser();
+    return res.data;
   }
 
   setSession(token) {
     if (token) {
       localStorage.setItem("jwt_token", token);
-      axios.defaults.headers.common["Authorization"] = "Bearer " + token;
+      api.defaults.headers.common["Authorization"] = "Bearer " + token;
     } else {
       localStorage.removeItem("jwt_token");
-      delete axios.defaults.headers.common["Authorization"];
+      delete api.defaults.headers.common["Authorization"];
     }
   }
 
@@ -55,10 +28,10 @@ class JwtAuthService {
     localStorageService.setItem("auth_user", user);
   }
 
-  removeUser() {
+  logout() {
+    this.setSession(null);
     localStorage.removeItem("auth_user");
   }
 }
 
-const service = new JwtAuthService();
-export default service;
+export default new JwtAuthService();

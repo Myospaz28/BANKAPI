@@ -43,7 +43,7 @@ export default function Layout1({ children }) {
           </Suspense>
 
           {/* FOOTER AREA */}
-          {footer.show ? <Footer /> : null}
+          {/* {footer.show ? <Footer /> : null} */}
         </div>
       </div>
 

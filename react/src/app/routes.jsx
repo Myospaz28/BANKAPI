@@ -22,7 +22,13 @@ import taskManagerRoutes from "./views/app/task-manager/taskManagerRoutes";
 
 //priyanka
 import usersRoutes from "./bank/usersRoutes";
-
+import bank_serviceRountes from "./bank_services/bank_serviceRountes";
+import bank_empRountes from "./bank_employement/bank_empRountes";
+import bank_drivingRountes from "./bank_driving/bank_drivingRoutes";
+import bank_profileRountes from "./bank_profileLookUp/bank_profileROutes";
+import bank_panRountes from "./bank_pan/bank_panRoutes";
+import bank_voterRountes from "./bank_voter/bank_voterRoutes";
+import bank_verifyRoutes from "./bank_verification/bank_verifyRoutes";
 import Error404 from "./views/sessions/Error";
 import sessionsRoutes from "./views/sessions/sessionsRoutes";
 
@@ -44,7 +50,16 @@ export const protectedRoutes = [
   ...contactRoutes,
   ...chatRoutes,
   ...usersRoutes,
+  ...bank_serviceRountes,
+  ...bank_empRountes,
+  ...bank_drivingRountes,
+  ...bank_profileRountes,
+  ...bank_panRountes,
+  ...bank_voterRountes,
+  ...bank_verifyRoutes,
 ];
+
+
 const routes = createBrowserRouter([
   {
     element: <AuthGuard />,

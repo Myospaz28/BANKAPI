@@ -1,47 +1,57 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Card, Col, Row } from "react-bootstrap";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { Formik } from "formik";
 import * as yup from "yup";
+import { useState } from "react";
 
 import jwtAuthService from "app/services/jwtAuthService";
-import { loginWithEmailAndPassword, userLoggedIn } from "app/redux/auth/authSlice";
+import { userLoggedIn } from "app/redux/auth/authSlice";
 
 import TextField from "app/components/sessions/TextField";
 import SocialButtons from "app/components/sessions/SocialButtons";
-import { useState } from "react";
 
+/**
+ * ✅ Validation schema (ONLY required checks)
+ * ❌ NO password length validation
+ */
 const validationSchema = yup.object().shape({
-  email: yup.string().email("Invalid email").required("Email is required"),
-  password: yup
-    .string()
-    .min(8, "Password must be 8 character long")
-    .required("Password is required")
+  username: yup.string().required("Username is required"),
+  password: yup.string().required("Password is required"),
 });
 
 export default function Signin() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
-  const initialValues = { email: "watson@example.com", password: "faskfjhaksdflkjafs" };
+  const initialValues = {
+    username: "",
+    password: "",
+  };
 
-  const handleSubmit = async (value) => {
+  const handleSubmit = async (values) => {
     try {
-      setLoading(true)
-      const result = await jwtAuthService.loginWithEmailAndPassword(value);
-      if (result.token) {
-        dispatch(userLoggedIn({ accessToken: result.token, user: result }));
-        setLoading(false)
-        navigate("/");
+      setLoading(true);
 
+      const result = await jwtAuthService.loginWithUsernameAndPassword(values);
+
+      if (result?.token) {
+        dispatch(
+          userLoggedIn({
+            accessToken: result.token,
+            user: result,
+          })
+        );
+        navigate("/");
       } else {
-        throw new Error({ message: 'Invalid username or password' });
+        throw new Error("Invalid credentials");
       }
     } catch (error) {
-      setLoading(false)
-      window.alert('Invalid username or password');
+      console.error("Login error:", error);
+      window.alert("Invalid username or password");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,31 +60,42 @@ export default function Signin() {
       <div className="auth-content">
         <Card className="o-hidden">
           <Row>
+            {/* LEFT */}
             <Col md={6}>
               <div className="p-4">
                 <div className="auth-logo text-center mb-4">
-                  <img src="/assets/images/logo.png" alt="Gull" />
+                  <img src="/assets/images/logo.png" alt="Logo" />
                 </div>
 
                 <h1 className="mb-3 text-18">Sign In</h1>
 
                 <Formik
-                  onSubmit={handleSubmit}
                   initialValues={initialValues}
-                  validationSchema={validationSchema}>
-                  {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
+                  validationSchema={validationSchema}
+                  onSubmit={handleSubmit}
+                >
+                  {({
+                    values,
+                    errors,
+                    touched,
+                    handleChange,
+                    handleBlur,
+                    handleSubmit,
+                  }) => (
                     <form onSubmit={handleSubmit}>
+                      {/* USERNAME */}
                       <TextField
-                        type="email"
-                        name="email"
-                        label="Email address"
+                        type="text"
+                        name="username"
+                        label="Username"
                         onBlur={handleBlur}
-                        value={values.email}
+                        value={values.username}
                         onChange={handleChange}
-                        helperText={errors.email}
-                        error={errors.email && touched.email}
+                        helperText={errors.username}
+                        error={errors.username && touched.username}
                       />
 
+                      {/* PASSWORD */}
                       <TextField
                         type="password"
                         name="password"
@@ -86,8 +107,12 @@ export default function Signin() {
                         error={errors.password && touched.password}
                       />
 
-                      <button type="submit" disabled={loading} className="btn btn-rounded btn-primary w-100 my-1 mt-2">
-                        {loading ? 'Pleas wait' : 'Sign In'}
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn btn-rounded btn-primary w-100 my-1 mt-2"
+                      >
+                        {loading ? "Please wait..." : "Sign In"}
                       </button>
                     </form>
                   )}
@@ -101,12 +126,13 @@ export default function Signin() {
               </div>
             </Col>
 
+            {/* RIGHT */}
             <Col md={6} className="text-center auth-cover">
               <div className="pe-3 auth-right">
                 <SocialButtons
                   routeUrl="/sessions/signup"
-                  googleHandler={() => alert("google")}
-                  facebookHandler={() => alert("facebook")}
+                  googleHandler={() => alert("Google login not implemented")}
+                  facebookHandler={() => alert("Facebook login not implemented")}
                 />
               </div>
             </Col>

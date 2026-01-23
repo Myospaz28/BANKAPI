@@ -19,6 +19,7 @@ const AppPagination = lazy(() => import("./pagination/AppPagination"));
 const AppProgressbar = lazy(() => import("./progressbar/AppProgressbar"));
 const AppCollapsible = lazy(() => import("./collapsibles/AppCollapsibles"));
 
+
 const uiKitsRoutes = [
   { path: "/uikits/alerts", element: <AppAlert /> },
   { path: "/uikits/accordions", element: <AppAccordion /> },
@@ -39,5 +40,6 @@ const uiKitsRoutes = [
   { path: "/uikits/sliders", element: <AppSlider /> },
   { path: "/uikits/rating", element: <AppRating /> }
 ];
+
 
 export default uiKitsRoutes;
