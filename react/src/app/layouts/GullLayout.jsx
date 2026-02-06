@@ -18,7 +18,7 @@ export default function GullLayout({ children }) {
     <Suspense>
       <Fragment>
         <Layout>{children}</Layout>
-        {settings.customizer.show ? <Customizer /> : null}
+        {/* {settings.customizer.show ? <Customizer /> : null} */}
       </Fragment>
     </Suspense>
   );

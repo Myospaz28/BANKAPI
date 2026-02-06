@@ -23,16 +23,18 @@ export default function FetchBankAccountVerifyPenniless() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
+  /* ================= INIT ================= */
   useEffect(() => {
     if (!usr_ser_id) navigate(-1);
+    fetchWallet();
   }, [usr_ser_id, navigate]);
 
-  useEffect(() => {
-    api
-      .get("api/getLoggedInUserWallet")
-      .then((res) => setWallet(Number(res.data?.data?.wallet_amount || 0)));
-  }, []);
+  const fetchWallet = async () => {
+    const res = await api.get("api/getLoggedInUserWallet");
+    setWallet(Number(res.data?.data?.wallet_amount || 0));
+  };
 
+  /* ================= SUBMIT ================= */
   const handleFetch = async () => {
     if (!fileNo || !accountNumber || !ifsc || !consent) {
       swal.fire("Validation Error", "All fields are required", "warning");
@@ -44,9 +46,14 @@ export default function FetchBankAccountVerifyPenniless() {
       return;
     }
 
+    /* ===== CONFIRM ALERT (AADHAAR STYLE) ===== */
     const confirm = await swal.fire({
       title: "Confirm Bank Verification (Penniless)",
-      html: `<p><b>Credits:</b> ${credits}</p><p><b>File No:</b> ${fileNo}</p>`,
+      html: `
+        <p><b>File No:</b> ${fileNo}</p>
+        <p><b>Credits Required:</b> ${credits}</p>
+        <p><b>Wallet Balance:</b> ${wallet}</p>
+      `,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Proceed",
@@ -69,21 +76,34 @@ export default function FetchBankAccountVerifyPenniless() {
         },
       );
 
-      const code = res.data?.data?.data?.code;
+      const apiData = res.data?.data;
+      const code = apiData?.data?.code;
 
       if (code !== "1000") {
         swal.fire(
           "Verification Failed",
-          res.data?.data?.data?.message || "Unable to verify bank account",
+          apiData?.data?.message || "Unable to verify bank account",
           "info",
         );
-        setResult(res.data.data);
+        setResult(apiData);
         return;
       }
 
-      setResult(res.data.data);
-      swal.fire("Success", "Bank account verified", "success");
-    } catch {
+      setResult(apiData);
+
+      /* ===== SUCCESS ALERT (AADHAAR STYLE) ===== */
+      swal.fire(
+        "Success",
+        `
+        Bank account verified successfully (Penniless)<br/>
+        Credits Deducted: <b>${credits}</b><br/>
+        Remaining Wallet: <b>${wallet - credits}</b>
+        `,
+        "success",
+      );
+
+      fetchWallet();
+    } catch (err) {
       swal.fire("Error", "Server error", "error");
     } finally {
       setLoading(false);
@@ -153,9 +173,11 @@ export default function FetchBankAccountVerifyPenniless() {
 
   const bank = result?.data?.bank_account_data;
 
+  /* ================= UI ================= */
   return (
     <Row>
       <Col md={12}>
+        {/* HEADER */}
         <Card body className="mb-3">
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name}</h4>
@@ -164,11 +186,13 @@ export default function FetchBankAccountVerifyPenniless() {
           </p>
         </Card>
 
+        {/* WALLET */}
         <Card body className="mb-3 text-center">
           <h6>💰 Wallet Balance</h6>
           <h2 className="text-success">{wallet}</h2>
         </Card>
 
+        {/* FORM */}
         <Card body className="mb-4">
           <Row>
             <Col md={6}>
@@ -216,6 +240,7 @@ export default function FetchBankAccountVerifyPenniless() {
           </Button>
         </Card>
 
+        {/* RESULT */}
         {bank && (
           <Card body>
             <div className="d-flex justify-content-between align-items-center">

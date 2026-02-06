@@ -1,8 +1,11 @@
 import express from "express";
-import { fetchVoterDetailsController, fetchMesonVoterController, generateMesonCaptcha } from "../controllers/voter.controller.js";
+import multer from "multer";
+import { fetchVoterDetailsController, voterOcrController, voterMesonInitController, voterMesonFetchController} from "../controllers/voter.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
 
+
 const router = express.Router();
+const upload = multer({ dest: "uploads/" });
 
 router.post(
   "/fetchVoterDetails",
@@ -10,7 +13,27 @@ router.post(
   fetchVoterDetailsController
 );
 
-router.post('/meson/captcha', verifyToken, generateMesonCaptcha);
-router.post("/fetchMeson", verifyToken, fetchMesonVoterController);
+
+router.post(
+  "/voterOcr",
+  verifyToken,
+  upload.fields([
+    { name: "file_front", maxCount: 1 },
+    { name: "file_back", maxCount: 1 },
+  ]),
+  voterOcrController
+);
+
+router.get(
+  "/voterMesonInit",
+  verifyToken,
+  voterMesonInitController
+);
+
+router.post(
+  "/voterMesonFetch",
+  verifyToken,
+  voterMesonFetchController
+);
 
 export default router;

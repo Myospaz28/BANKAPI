@@ -29,7 +29,7 @@ export default function ForgotPassword() {
             <Col md={6}>
               <div className="p-4">
                 <div className="auth-logo text-center mb-4">
-                  <img src="/assets/images/logo.png" alt="Gull" />
+                  <img src="/assets/images/logo.jpeg" alt="Gull" />
                 </div>
 
                 <h1 className="mb-3 text-18">Forgot Password</h1>

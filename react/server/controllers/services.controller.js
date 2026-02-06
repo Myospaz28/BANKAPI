@@ -92,25 +92,31 @@ export const getAllUserRoles = async (req, res) => {
 };
 
 
-export const getUsersController = async (req, res) => {
+
+export const getUsersController1 = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT 
-  u.users_id,
-  u.name,
-  u.username,
-  u.email,
-  u.contact_number,
-  u.address,
-  u.wallet_amount,
-  u.status,
-  u.created_at,
-  r.role AS role_name
-FROM users u
-JOIN userrole r ON r.ur_id = u.role_id
-WHERE u.status = 'active'
-ORDER BY u.users_id DESC;
-`
+        u.users_id,
+        u.name,
+        u.username,
+        u.email,
+        u.contact_number,
+        u.address,
+        u.wallet_amount,
+        u.status,
+        u.created_at,
+        u.login_time,
+        u.logout_time,
+        u.log_session_time,
+        u.latitude,
+        u.longitude,
+
+        r.role AS role_name
+      FROM users u
+      JOIN userrole r ON r.ur_id = u.role_id
+      WHERE u.status = 'active'
+      ORDER BY u.users_id DESC`
     );
 
     res.status(200).json({
@@ -127,6 +133,59 @@ ORDER BY u.users_id DESC;
   }
 };
 
+export const getUsersController = async (req, res) => {
+  try {
+    const { role, userId } = req.user; // ✅ FIX HERE
+
+    console.log("User Info:", req.user);
+
+    let query = `
+      SELECT 
+        u.users_id,
+        u.name,
+        u.username,
+        u.email,
+        u.contact_number,
+        u.address,
+        u.wallet_amount,
+        u.status,
+        u.created_at,
+        u.login_time,
+        u.logout_time,
+        u.log_session_time,
+        u.latitude,
+        u.longitude,
+        r.role AS role_name
+      FROM users u
+      JOIN userrole r ON r.ur_id = u.role_id
+      WHERE u.status = 'active'
+    `;
+
+    const params = [];
+
+    // 🔐 ROLE BASED CONDITION
+    if (role === "bank") {
+      query += " AND u.users_id = ?";
+      params.push(userId); // ✅ FIX HERE
+    }
+
+    query += " ORDER BY u.users_id DESC";
+
+    const [rows] = await db.query(query, params);
+
+    res.status(200).json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("❌ Get users error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+    });
+  }
+};
 
 export const getUserServicesByUserId = async (req, res) => {
   try {
@@ -207,7 +266,6 @@ export const getUserServicesByUserId = async (req, res) => {
     });
   }
 };
-
 
 
 export const getAvailableMasterServicesByCategoryForUser = async (req, res) => {
@@ -750,7 +808,7 @@ export const getLoggedInUserWallet = async (req, res) => {
 
 
 
-export const getUserActiveServicesByCategory = async (req, res) => {
+export const getUserActiveServicesByCategory1 = async (req, res) => {
   try {
     const { mas_cat_id } = req.params;
     const userId = req.user?.userId;
@@ -820,6 +878,81 @@ export const getUserActiveServicesByCategory = async (req, res) => {
     });
   }
 };
+export const getUserActiveServicesByCategory = async (req, res) => {
+  try {
+    const { mas_cat_id } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (!mas_cat_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Category ID is required",
+      });
+    }
+
+    /* ================= CATEGORY ================= */
+    const [categoryRows] = await db.query(
+      `
+      SELECT mas_cat_id, category_name
+      FROM master_category
+      WHERE mas_cat_id = ?
+        AND status = 'active'
+      `,
+      [mas_cat_id],
+    );
+
+    if (categoryRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found or inactive",
+      });
+    }
+
+    /* ================= SERVICES ================= */
+    const [services] = await db.query(
+      `
+      SELECT 
+        us.usr_ser_id,
+        us.mas_ser_id,
+        ms.service_name,
+        ms.route_path,          -- ✅ REQUIRED FOR REDIRECT
+        us.actual_credits,
+        us.status,
+        ms.sample               -- ✅ SAMPLE JSON / STRING
+      FROM user_services us
+      INNER JOIN master_services ms 
+        ON ms.mas_ser_id = us.mas_ser_id
+      WHERE us.users_id = ?
+        AND ms.mas_cat_id = ?
+        AND us.status = 'active'
+        AND ms.status = 'active'
+      ORDER BY ms.service_name ASC
+      `,
+      [userId, mas_cat_id],
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        category: categoryRows[0],
+        services,
+      },
+    });
+  } catch (error) {
+    console.error("❌ getUserActiveServicesByCategory error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 
 export const getUserWalletCreditHistory = async (req, res) => {
@@ -866,7 +999,6 @@ export const getUserWalletCreditHistory = async (req, res) => {
     });
   }
 };
-
 export const getUserWalletStatementController1 = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -1048,8 +1180,6 @@ export const getUserWalletStatementController = async (req, res) => {
 
 
 
-
-
 export const fetchRcDetailedController1 = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -1130,7 +1260,6 @@ export const fetchRcDetailedController1 = async (req, res) => {
     });
   }
 };
-
 export const fetchRcDetailedController2 = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -3228,5 +3357,478 @@ export const fetchFastagDetailedController = async (req, res) => {
     });
   } finally {
     connection.release();
+  }
+};
+
+
+export const fetchRcEchallanController = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = req.user.userId;
+    const {
+      usr_ser_id,
+      rc_number,
+      chassis_number,
+      engine_number,
+      file_no,
+      consent,
+    } = req.body;
+
+    /* ================= VALIDATION ================= */
+    if (
+      !usr_ser_id ||
+      !rc_number ||
+      !chassis_number ||
+      !engine_number ||
+      !file_no ||
+      consent !== "Y"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Service not allowed",
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient credits",
+      });
+    }
+
+    /* ================= GRIDLINES API ================= */
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/rc-api/echallan/fetch",
+      {
+        rc_number,
+        chassis_number,
+        engine_number,
+        consent,
+      },
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    /* ================= NO DEDUCTION ON FAILURE ================= */
+    if (code !== "1005") {
+      await connection.rollback();
+      return res.json({
+        success: true,
+        data: apiRes.data,
+      });
+    }
+
+    /* ================= WALLET DEDUCTION ================= */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId]
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions (
+        users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by
+      ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId]
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs (
+        users_id, usr_ser_id, file_no,
+        credits_used, api_name,
+        api_status, wallet_transaction_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        "RC_ECHALLAN",
+        "success",
+        walletTxn.insertId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: apiRes.data,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("❌ RC E-Challan error:", error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: "E-Challan fetch failed",
+    });
+  } finally {
+    connection.release();
+  }
+};
+export const fetchRcDetailedByChassisController = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, chassis_number, file_no, consent } = req.body;
+
+    if (!usr_ser_id || !chassis_number || !file_no || consent !== "Y") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: "Service not allowed" });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Insufficient credits" });
+    }
+
+    /* ================= GRIDLINES API ================= */
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/rc-api/fetch-detailed-by-chassis",
+      { chassis_number, consent },
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    if (code !== "1007") {
+      await connection.rollback();
+      return res.json({ success: true, data: apiRes.data });
+    }
+
+    /* ================= WALLET DEDUCTION ================= */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId]
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions (
+        users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by
+      ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId]
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs (
+        users_id, usr_ser_id, file_no,
+        credits_used, api_name,
+        api_status, wallet_transaction_id,
+        created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        "RC_DETAILED_BY_CHASSIS",
+        "success",
+        walletTxn.insertId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: apiRes.data,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("❌ RC Detailed error:", error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: "RC Detailed fetch failed",
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+export const getUserSessionTimesController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= USER SESSION TIMES ================= */
+    const [[user]] = await connection.query(
+      `
+      SELECT 
+        login_time,
+        logout_time,
+        log_session_time
+      FROM users
+      WHERE users_id = ?
+      FOR UPDATE
+      `,
+      [userId]
+    );
+
+    if (!user) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: "Session times fetched successfully",
+      data: {
+        login_time: user.login_time,
+        logout_time: user.logout_time,
+        log_session_time: user.log_session_time,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("❌ Get session times error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch session times",
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+export const getLoggedInUserController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    const [[user]] = await connection.query(
+      `
+      SELECT
+        u.users_id,
+        u.name,
+        u.role_id,
+        r.role AS role,
+        u.email,
+        u.contact_number,
+        u.username,
+        u.address,
+        u.wallet_amount,
+        u.status,
+        u.created_at,
+        u.updated_at,
+        u.login_time,
+        u.logout_time,
+        u.log_session_time,
+        u.latitude,
+        u.longitude
+      FROM users u
+      LEFT JOIN userrole r
+        ON r.ur_id = u.role_id
+      WHERE u.users_id = ?
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!user) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("❌ Get logged-in user error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user",
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+
+export const getUserAccessDetailsController = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role; // ✅ from session
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const [[user]] = await db.query(
+      `
+      SELECT
+        login_time,
+        logout_time,
+        latitude,
+        longitude
+      FROM users
+      WHERE users_id = ?
+        AND status = 'active'
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found or inactive",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        login_time: user.login_time,
+        logout_time: user.logout_time,
+        latitude: user.latitude,
+        longitude: user.longitude,
+        role, // ✅ added from session
+      },
+    });
+  } catch (error) {
+    console.error("❌ getUserAccessDetailsController error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };

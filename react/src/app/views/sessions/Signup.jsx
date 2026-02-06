@@ -38,7 +38,7 @@ export default function Signup() {
             <Col md={6} className="text-center auth-cover">
               <div className="ps-3 auth-right">
                 <div className="auth-logo text-center mt-4">
-                  <img src="/assets/images/logo.png" alt="Gull" />
+                  <img src="/assets/images/logo.jpeg" alt="Gull" />
                 </div>
 
                 <div className="w-100 h-100 justify-content-center d-flex flex-column">

@@ -17,7 +17,7 @@ export default function Layout2Header() {
   return (
     <div className="main-header">
       <div className="logo">
-        <img src="/assets/images/logo.png" alt="Logo" />
+        <img src="/assets/images/logo.jpeg" alt="Logo" />
       </div>
 
       <div className="menu-toggle" onClick={handleMenuClick}>

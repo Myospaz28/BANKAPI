@@ -1,528 +1,3 @@
-// import { useState } from "react";
-// import { Button, Card, Col, Form, Row } from "react-bootstrap";
-// import { Formik } from "formik";
-// import * as yup from "yup";
-
-// import Breadcrumb from "app/components/Breadcrumb";
-
-// export default function FormValidation() {
-//   const [state] = useState({
-//     Name: "",
-//     mobileNumber: "",
-//     phone: "",
-//     username: "",
-//     city: "",
-//     cardNumber: "4444444444444444",
-//     email: "",
-//     password: "",
-//     repassword: "",
-//     zip: "",
-//     agree: false,
-//     checkbox1: "",
-//     checkbox2: "",
-//     radio: "",
-//     range: {
-//       startDate: new Date(),
-//       endDate: (() => {
-//         let date = new Date();
-//         date.setDate(date.getDate() + 7);
-//         return date;
-//       })()
-//     }
-//   });
-
-//   const handleSubmit = (values, { setSubmitting }) => {
-//     console.log(values);
-//   };
-
-//   return (
-//     <div>
-//       <Breadcrumb
-//         routeSegments={[{ name: "Users", path: "/users" }, { name: "Add Users" }]}
-//       />
-
-//       <Row>
-//         <Col md={8}>
-
-//           <Card body className="mb-4">
-//             <Formik
-//               initialValues={state}
-//               onSubmit={handleSubmit}
-//               validationSchema={basicFormSchema}>
-//               {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => {
-//                 return (
-//                   <form className="needs-validation" onSubmit={handleSubmit} noValidate>
-//                     <Row>
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="Name"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>Name</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           placeholder="Name"
-//                           name="Name"
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           value={values.Name}
-//                           isValid={touched.Name && !errors.Name}
-//                           isInvalid={touched.Name && errors.Name}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                         Name is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="lastName"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>Mobile Number</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           name="mobileNumber"
-//                           placeholder="Mobile Number"
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           value={values.mobileNumber}
-//                           isValid={touched.mobileNumber && !errors.mobileNumber}
-//                           isInvalid={touched.mobileNumber && errors.mobileNumber}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                           Mobile Number is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="username"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>Username</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           name="username"
-//                           placeholder="Username"
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           value={values.username}
-//                           isValid={touched.username && !errors.username}
-//                           isInvalid={touched.username && errors.username}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                           Username is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-//                     </Row>
-
-//                     <Row>
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="userName"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>City</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           name="city"
-//                           placeholder="City"
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           value={values.city}
-//                           isValid={touched.city && !errors.city}
-//                           isInvalid={touched.city && errors.city}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                           City is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="state"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>Email</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           name="email"
-//                           placeholder="Email"
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           value={values.email}
-//                           isInvalid={touched.email && errors.email}
-//                           isValid={touched.email && !errors.email}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                           Email is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-
-//                       <Form.Group
-//                         as={Col}
-//                         md={4}
-//                         controlId="password"
-//                         className="mb-3 position-relative">
-//                         <Form.Label>Password</Form.Label>
-
-//                         <Form.Control
-//                           required
-//                           type="text"
-//                           name="password"
-//                           placeholder="Password"
-//                           value={values.password}
-//                           onBlur={handleBlur}
-//                           onChange={handleChange}
-//                           isInvalid={touched.password && errors.password}
-//                           isValid={touched.password && !errors.password}
-//                         />
-
-//                         <Form.Control.Feedback type="invalid">
-//                           Password is required
-//                         </Form.Control.Feedback>
-//                       </Form.Group>
-//                     </Row>
-
-//                     <Form.Group controlId="agree" className="position-relative mb-3">
-//                       <Form.Check
-//                         type="checkbox"
-//                         name="agree"
-//                         label="Agree to terms and conditions"
-//                         onBlur={handleBlur}
-//                         value={values.agree}
-//                         onChange={handleChange}
-//                         checked={values.agree}
-//                         isInvalid={touched.agree && errors.agree}
-//                         required
-//                         feedbackType="invalid"
-//                         feedback="You must agree before submitting"
-//                       />
-//                     </Form.Group>
-
-//                     <Button type="submit">Submit form</Button>
-//                   </form>
-//                 );
-//               }}
-//             </Formik>
-//           </Card>
-//         </Col>
-
-//       </Row>
-//     </div>
-//   );
-// }
-
-// const basicFormSchema = yup.object().shape({
-//   Name: yup.string().required("first name is required"),
-//   mobileNumber: yup.string().required("Mobile Numberis required"),
-//   username: yup.string().required("select any option"),
-//   city: yup.string().required("city is required"),
-//   password: yup.string().required("password is required"),
-//   agree: yup.bool().oneOf([true], "terms must be accepted"),
-//   email: yup.string().required("Required")
-// });
-
-// import { useState } from "react";
-// import { Button, Card, Col, Form, Row } from "react-bootstrap";
-// import { Formik } from "formik";
-// import * as yup from "yup";
-// import clsx from "clsx";
-// import swal from "sweetalert2";
-
-// import Breadcrumb from "app/components/Breadcrumb";
-
-// /* ===== SERVICES SOURCE (FROM h5 NAMES) ===== */
-// const ALL_SERVICES = [
-//   "Criminal and Court Record Verification",
-//   "Aadhaar verification",
-//   "Driving License verification",
-//   "PAN verification",
-//   "Profile Lookup",
-//   "GSTIN verification",
-//   "Bank Account Verification",
-//   "Voter ID verification",
-//   "Liveness",
-//   "Facematch",
-//   "Passport Verification",
-//   "DigiLocker",
-// ];
-
-// export default function FormValidation() {
-//   const [state] = useState({
-//     Name: "",
-//     mobileNumber: "",
-//     username: "",
-//     city: "",
-//     email: "",
-//     password: "",
-//     agree: false,
-
-//     /* NEW */
-//     services: [],
-//     walletAmount: "",
-//   });
-
-//   const handleSubmit = (values, { setSubmitting, resetForm }) => {
-//     console.log("CREATE USER PAYLOAD:", values);
-
-//     swal.fire({
-//       icon: "success",
-//       title: "User Created Successfully",
-//       html: `
-//         <b>Name:</b> ${values.Name}<br/>
-//         <b>Services:</b> ${values.services.length ? values.services.join(", ") : "None"}<br/>
-//         <b>Initial Wallet Amount:</b> ₹ ${values.walletAmount || 0}
-//       `,
-//     });
-
-//     setSubmitting(false);
-//     resetForm();
-//   };
-
-//   return (
-//     <div>
-//       <Breadcrumb
-//         routeSegments={[
-//           { name: "Users", path: "/users" },
-//           { name: "Add Users" },
-//         ]}
-//       />
-
-//       <Row>
-//         <Col md={8}>
-//           <Card body className="mb-4">
-//             <Formik
-//               initialValues={state}
-//               onSubmit={handleSubmit}
-//               validationSchema={basicFormSchema}
-//             >
-//               {({
-//                 values,
-//                 errors,
-//                 touched,
-//                 handleChange,
-//                 handleBlur,
-//                 handleSubmit,
-//               }) => (
-//                 <form
-//                   className="needs-validation"
-//                   onSubmit={handleSubmit}
-//                   noValidate
-//                 >
-//                   {/* ===== BASIC DETAILS ===== */}
-//                   <Row>
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Name</Form.Label>
-//                       <Form.Control
-//                         type="text"
-//                         name="Name"
-//                         placeholder="Name"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.Name}
-//                         isInvalid={touched.Name && errors.Name}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.Name}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Mobile Number</Form.Label>
-//                       <Form.Control
-//                         type="text"
-//                         name="mobileNumber"
-//                         placeholder="Mobile Number"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.mobileNumber}
-//                         isInvalid={touched.mobileNumber && errors.mobileNumber}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.mobileNumber}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Username</Form.Label>
-//                       <Form.Control
-//                         type="text"
-//                         name="username"
-//                         placeholder="Username"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.username}
-//                         isInvalid={touched.username && errors.username}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.username}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-//                   </Row>
-
-//                   <Row>
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>City</Form.Label>
-//                       <Form.Control
-//                         type="text"
-//                         name="city"
-//                         placeholder="City"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.city}
-//                         isInvalid={touched.city && errors.city}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.city}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Email</Form.Label>
-//                       <Form.Control
-//                         type="email"
-//                         name="email"
-//                         placeholder="Email"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.email}
-//                         isInvalid={touched.email && errors.email}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.email}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Password</Form.Label>
-//                       <Form.Control
-//                         type="password"
-//                         name="password"
-//                         placeholder="Password"
-//                         onBlur={handleBlur}
-//                         onChange={handleChange}
-//                         value={values.password}
-//                         isInvalid={touched.password && errors.password}
-//                       />
-//                       <Form.Control.Feedback type="invalid">
-//                         {errors.password}
-//                       </Form.Control.Feedback>
-//                     </Form.Group>
-//                   </Row>
-
-//                   {/* ===== SERVICE SELECTION ===== */}
-//                   <Card body className="mb-4 mt-3">
-//                     <Card.Title>Select Services</Card.Title>
-
-//                     {ALL_SERVICES.map((service, index) => (
-//                       <div
-//                         key={service}
-//                         className={clsx("ul-widget1", {
-//                           "mt-3": index !== 0,
-//                         })}
-//                       >
-//                         <div className="ul-widget2__item">
-//                           <label className="checkbox checkbox-outline-primary">
-//                             <input
-//                               type="checkbox"
-//                               checked={values.services.includes(service)}
-//                               onChange={(e) => {
-//                                 const updated = e.target.checked
-//                                   ? [...values.services, service]
-//                                   : values.services.filter(
-//                                       (s) => s !== service
-//                                     );
-
-//                                 handleChange({
-//                                   target: {
-//                                     name: "services",
-//                                     value: updated,
-//                                   },
-//                                 });
-//                               }}
-//                             />
-//                             <span className="checkmark" />
-//                           </label>
-
-//                           <div className="ul-widget2__info">
-//                             <span className="ul-widget2__title">
-//                               {service}
-//                             </span>
-//                           </div>
-//                         </div>
-//                       </div>
-//                     ))}
-//                   </Card>
-
-//                   {/* ===== WALLET AMOUNT ===== */}
-//                   <Row>
-//                     <Form.Group as={Col} md={4} className="mb-3">
-//                       <Form.Label>Initial Wallet Amount (₹)</Form.Label>
-//                       <Form.Control
-//                         type="number"
-//                         name="walletAmount"
-//                         placeholder="Enter amount"
-//                         onChange={handleChange}
-//                         value={values.walletAmount}
-//                       />
-//                     </Form.Group>
-//                   </Row>
-
-//                   {/* ===== TERMS ===== */}
-//                   <Form.Group className="mb-3">
-//                     <Form.Check
-//                       type="checkbox"
-//                       name="agree"
-//                       label="Agree to terms and conditions"
-//                       onChange={handleChange}
-//                       checked={values.agree}
-//                       isInvalid={touched.agree && errors.agree}
-//                     />
-//                     <Form.Control.Feedback type="invalid">
-//                       {errors.agree}
-//                     </Form.Control.Feedback>
-//                   </Form.Group>
-
-//                   <Button type="submit">Create User</Button>
-//                 </form>
-//               )}
-//             </Formik>
-//           </Card>
-//         </Col>
-//       </Row>
-//     </div>
-//   );
-// }
-
-// /* ===== VALIDATION ===== */
-// const basicFormSchema = yup.object().shape({
-//   Name: yup.string().required("Name is required"),
-//   mobileNumber: yup.string().required("Mobile Number is required"),
-//   username: yup.string().required("Username is required"),
-//   city: yup.string().required("City is required"),
-//   email: yup.string().required("Email is required"),
-//   password: yup.string().required("Password is required"),
-//   agree: yup.bool().oneOf([true], "You must accept terms"),
-//   walletAmount: yup.number().min(0, "Invalid amount"),
-// });
-
 import { useEffect, useState } from "react";
 import { Button, Card, Col, Form, Row } from "react-bootstrap";
 import { Formik } from "formik";
@@ -575,6 +50,11 @@ export default function FormValidation() {
     role_id: "",
     walletAmount: "",
     services: [],
+    login_time: "",
+    logout_time: "",
+    log_session_time: "",
+    latitude: "",
+    longitude: "",
   };
 
   /* ================= SUBMIT ================= */
@@ -586,21 +66,29 @@ export default function FormValidation() {
         name: values.name,
         mobile: values.mobile,
         username: values.username,
-        city: values.city,
         address: values.address,
         email: values.email,
         password: values.password,
         role_id: values.role_id,
         wallet_amount: values.walletAmount,
+
+        // ✅ NEW FIELDS
+        login_time: values.login_time || null,
+        logout_time: values.logout_time || null,
+
+        // minutes (number) – backend will convert to TIME
+        log_session_time: values.log_session_time || null,
+
+        latitude: values.latitude || null,
+        longitude: values.longitude || null,
+
         services: values.services.map((s) => ({
           mas_ser_id: s.mas_ser_id,
           credits: s.default_credits,
         })),
       };
 
-      // console.log("🚀 CREATE USER PAYLOAD:", payload);
-
-      // ✅ API CALL
+      console.log("🚀 CREATE USER PAYLOAD:", payload);
       const res = await api.post("auth/signup", payload);
 
       swal.fire({
@@ -694,6 +182,7 @@ export default function FormValidation() {
                           name="username"
                           value={values.username}
                           onChange={handleChange}
+                          autoComplete="new-username"
                           isInvalid={touched.username && errors.username}
                         />
                       </Form.Group>
@@ -725,6 +214,7 @@ export default function FormValidation() {
                           name="password"
                           value={values.password}
                           onChange={handleChange}
+                          autoComplete="new-password"
                           isInvalid={touched.password && errors.password}
                         />
                       </Form.Group>
@@ -748,6 +238,78 @@ export default function FormValidation() {
                             </option>
                           ))}
                         </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  {/* ================= LOGIN / LOCATION DETAILS ================= */}
+
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Login Time</Form.Label>
+                        <Form.Control
+                          type="time"
+                          name="login_time"
+                          value={values.login_time}
+                          onChange={handleChange}
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Logout Time</Form.Label>
+                        <Form.Control
+                          type="time"
+                          name="logout_time"
+                          value={values.logout_time}
+                          onChange={handleChange}
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Session Time (Minutes)</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="0"
+                          name="log_session_time"
+                          value={values.log_session_time}
+                          onChange={handleChange}
+                          placeholder="Enter session time in minutes"
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Latitude</Form.Label>
+                        <Form.Control
+                          type="number"
+                          step="0.00000001"
+                          name="latitude"
+                          value={values.latitude}
+                          onChange={handleChange}
+                          placeholder="Eg: 19.076090"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Longitude</Form.Label>
+                        <Form.Control
+                          type="number"
+                          step="0.00000001"
+                          name="longitude"
+                          value={values.longitude}
+                          onChange={handleChange}
+                          placeholder="Eg: 72.877426"
+                        />
                       </Form.Group>
                     </Col>
                   </Row>
@@ -799,7 +361,7 @@ export default function FormValidation() {
 
                         {cat.services.map((ser) => {
                           const checked = values.services.some(
-                            (s) => s.mas_ser_id === ser.mas_ser_id
+                            (s) => s.mas_ser_id === ser.mas_ser_id,
                           );
 
                           return (
@@ -814,7 +376,7 @@ export default function FormValidation() {
                                 if (e.target.checked) updated.push(ser);
                                 else
                                   updated = updated.filter(
-                                    (s) => s.mas_ser_id !== ser.mas_ser_id
+                                    (s) => s.mas_ser_id !== ser.mas_ser_id,
                                   );
 
                                 handleChange({

@@ -1,7 +1,9 @@
 import axios from "axios";
 import db from "../database/db.js";
-import { v4 as uuidv4 } from 'uuid';
+import fs from "fs";
+import FormData from "form-data";
 
+//meson
 export const fetchVoterDetailsController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -164,77 +166,33 @@ export const fetchVoterDetailsController = async (req, res) => {
 };
 
 
-export const generateMesonCaptcha = async (req, res) => {
-  try {
-    const transactionId = uuidv4();
-
-    const apiRes = await axios.get(
-      'https://api.gridlines.io/voter-api/meson/captcha',
-      {
-        headers: {
-          'X-API-Key': process.env.GRIDLINES_API_KEY,
-          'X-Auth-Type': 'API-Key',
-          'X-Transaction-ID': transactionId,
-        },
-      }
-    );
-
-    res.json({
-      success: true,
-      transaction_id: transactionId,
-      captcha_base64: apiRes.data?.data?.captcha_base64,
-    });
-  } catch (error) {
-    console.error(
-      '❌ MESON CAPTCHA ERROR:',
-      error.response?.data || error.message
-    );
-
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate captcha',
-    });
-  }
-};
-
-
-
-export const fetchMesonVoterController = async (req, res) => {
+export const voterOcrController = async (req, res) => {
   const connection = await db.getConnection();
 
   try {
     const userId = req.user.userId;
-    const {
-      usr_ser_id,
-      voter_id,
-      file_no,
-      consent,
-      captcha,
-      transaction_id,
-    } = req.body;
 
-    // 🔐 Validation
-    if (
-      !usr_ser_id ||
-      !voter_id ||
-      !file_no ||
-      !captcha ||
-      !transaction_id ||
-      consent !== 'Y'
-    ) {
+    const { usr_ser_id, file_no, consent } = req.body;
+    const fileFront = req.files?.file_front?.[0];
+    const fileBack = req.files?.file_back?.[0];
+
+ 
+    if (!usr_ser_id || !file_no || consent !== "Y" || !fileFront) {
       return res.status(400).json({
         success: false,
-        message: 'All fields are required',
+        message: "Invalid payload",
       });
     }
 
     await connection.beginTransaction();
 
-    // ===== Check service =====
+   
     const [[service]] = await connection.query(
       `SELECT actual_credits
        FROM user_services
-       WHERE usr_ser_id = ? AND users_id = ? AND status = 'active'
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
        FOR UPDATE`,
       [usr_ser_id, userId]
     );
@@ -243,15 +201,18 @@ export const fetchMesonVoterController = async (req, res) => {
       await connection.rollback();
       return res.status(403).json({
         success: false,
-        message: 'Service not allowed',
+        message: "Service not allowed",
       });
     }
 
     const creditsUsed = Number(service.actual_credits);
 
-    // ===== Wallet check =====
+  
     const [[user]] = await connection.query(
-      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
       [userId]
     );
 
@@ -261,39 +222,42 @@ export const fetchMesonVoterController = async (req, res) => {
       await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Insufficient credits',
+        message: "Insufficient credits",
       });
     }
 
-    // ===== MESON FETCH =====
+    const formData = new FormData();
+    formData.append("file_front", fs.createReadStream(fileFront.path));
+    if (fileBack) {
+      formData.append("file_back", fs.createReadStream(fileBack.path));
+    }
+    formData.append("consent", consent);
+
     const apiRes = await axios.post(
-      'https://api.gridlines.io/voter-api/meson/fetch',
-      {
-        voter_id,
-        captcha,
-        consent,
-      },
+      "https://api.gridlines.io/voter-api/ocr",
+      formData,
       {
         headers: {
-          'X-API-Key': process.env.GRIDLINES_API_KEY,
-          'X-Auth-Type': 'API-Key',
-          'X-Transaction-ID': transaction_id,
-          'Content-Type': 'application/json',
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "X-Reference-ID": file_no,
         },
       }
     );
 
     const code = apiRes.data?.data?.code;
 
-    if (code !== '1000') {
+    
+    if (code !== "1008") {
       await connection.rollback();
       return res.json({
         success: true,
-        data: apiRes.data,
+        data: apiRes.data, 
       });
     }
 
-    // ===== SUCCESS → deduct wallet =====
+  
     const closingBalance = openingBalance - creditsUsed;
 
     await connection.query(
@@ -313,16 +277,16 @@ export const fetchMesonVoterController = async (req, res) => {
     await connection.query(
       `INSERT INTO user_service_logs (
         users_id, usr_ser_id, file_no,
-        credits_used, api_name, api_status,
-        wallet_transaction_id, created_by
+        credits_used, api_name,
+        api_status, wallet_transaction_id, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
         creditsUsed,
-        'MESON_VOTER_FETCH',
-        'success',
+        "VOTER_OCR",
+        "success",
         walletTxn.insertId,
         userId,
       ]
@@ -332,7 +296,7 @@ export const fetchMesonVoterController = async (req, res) => {
 
     res.json({
       success: true,
-      data: apiRes.data,
+      data: apiRes.data, 
       wallet: {
         opening_balance: openingBalance,
         credits_used: creditsUsed,
@@ -341,10 +305,191 @@ export const fetchMesonVoterController = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error('❌ MESON FETCH ERROR:', error.response?.data || error);
+    console.error("❌ Voter OCR Error:", error.response?.data || error);
     res.status(500).json({
       success: false,
-      message: 'Voter fetch failed',
+      message: "Voter ID OCR failed",
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+
+export const voterMesonInitController = async (req, res) => {
+  try {
+    const apiRes = await axios.get(
+      "https://api.gridlines.io/voter-api/meson/init",
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+      }
+    );
+
+    return res.json({
+      success: true,
+      data: apiRes.data, // 🔥 FULL RESPONSE
+    });
+  } catch (error) {
+    console.error("❌ Voter Meson Init Error:", error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to initialize voter verification",
+    });
+  }
+};
+
+
+export const voterMesonFetchController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, file_no, voter_id, captcha, consent, transaction_id } =
+      req.body;
+
+    /* ================= VALIDATION ================= */
+    if (
+      !usr_ser_id ||
+      !file_no ||
+      !voter_id ||
+      !captcha ||
+      consent !== "Y" ||
+      !transaction_id
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Service not allowed",
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient credits",
+      });
+    }
+
+    /* ================= GRIDLINES FETCH ================= */
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/voter-api/meson/fetch",
+      {
+        voter_id,
+        captcha,
+        consent,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "X-Transaction-ID": transaction_id,
+          "X-Reference-ID": file_no,
+        },
+      }
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    /* ================= NON-SUCCESS ================= */
+    if (code !== "1000") {
+      await connection.rollback();
+      return res.json({
+        success: true,
+        data: apiRes.data, // full API response
+      });
+    }
+
+    /* ================= WALLET DEDUCTION ================= */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId]
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions (
+        users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by
+      ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId]
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs (
+        users_id, usr_ser_id, file_no,
+        credits_used, api_name,
+        api_status, wallet_transaction_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        "VOTER_MESON_FETCH",
+        "success",
+        walletTxn.insertId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: apiRes.data, // 🔥 FULL RESPONSE
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("❌ Voter Meson Fetch Error:", error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch voter details",
     });
   } finally {
     connection.release();

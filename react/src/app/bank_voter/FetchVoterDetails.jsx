@@ -237,7 +237,6 @@ export default function FetchVoterDetails() {
         </Card>
 
         {/* RESULT */}
-        {/* RESULT */}
         {result && (
           <Card body className="mt-4">
             <div className="d-flex justify-content-between align-items-center">

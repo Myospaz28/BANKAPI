@@ -131,3 +131,25 @@ export const generateLastDays = (length = 7) => {
     .sort((a, b) => b - a)
     .map((i) => moment().subtract(i, "days").format("D MMM YY"));
 };
+
+
+/**
+ * Check whether current time is within allowed service window
+ * @param {string|null} login_time  - HH:mm:ss
+ * @param {string|null} logout_time - HH:mm:ss
+ * @returns {boolean}
+ */
+export function isServiceAccessAllowed(login_time, logout_time) {
+  // No restriction → allow
+  if (!login_time || !logout_time) return true;
+
+  const current = moment().format("HH:mm:ss");
+
+  // Normal window (e.g. 09:00 → 18:00)
+  if (login_time < logout_time) {
+    return current >= login_time && current <= logout_time;
+  }
+
+  // Overnight window (e.g. 22:00 → 06:00)
+  return current >= login_time || current <= logout_time;
+}

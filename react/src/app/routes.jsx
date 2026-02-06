@@ -31,6 +31,16 @@ import bank_voterRountes from "./bank_voter/bank_voterRoutes";
 import bank_verifyRoutes from "./bank_verification/bank_verifyRoutes";
 import Error404 from "./views/sessions/Error";
 import sessionsRoutes from "./views/sessions/sessionsRoutes";
+import bank_gstinRountes from "./bank_gstin/bank_gstinRoutes";
+import passport_verifyRoutes from "./passport_verification/pass_verifyRoutes";
+import bank_companyRoutes from "./bank_company/bank_companyRoutes";
+import msme_verifyRoutes from "./msme_verification/msme_verifyRoutes";
+import facematch_verifyRoutes from "./facematch/facematch_verifyRoutes";
+import aadhar_verifyRoutes from "./aadhar/aadhar_verifyRoutes";
+import bank_ccrvRoutes from "./bank_ccrm/bank_ccrvRoutes";
+import LayoutWithAutoLogout from "./services/LayoutWithAutoLogout";
+
+
 
 export const protectedRoutes = [
   ...dashboardRoutes,
@@ -57,16 +67,37 @@ export const protectedRoutes = [
   ...bank_panRountes,
   ...bank_voterRountes,
   ...bank_verifyRoutes,
+  ...bank_gstinRountes,
+  ...passport_verifyRoutes,
+  ...bank_companyRoutes,
+  ...msme_verifyRoutes,
+  ...facematch_verifyRoutes,
+  ...aadhar_verifyRoutes,
+  ...bank_ccrvRoutes,
 ];
 
 
+// const routes = createBrowserRouter([
+//   {
+//     element: <AuthGuard />,
+//     children: protectedRoutes
+//   },
+//   ...sessionsRoutes,
+//   { path: "/", loader: () => redirect("/dashboard/v2") },
+//   { path: "*", element: <Error404 /> }
+// ]);
 const routes = createBrowserRouter([
   {
-    element: <AuthGuard />,
-    children: protectedRoutes
+    element: <LayoutWithAutoLogout  />, 
+    children: [
+      {
+        element: <AuthGuard />,
+        children: protectedRoutes,
+      },
+    ],
   },
   ...sessionsRoutes,
-  { path: "/", loader: () => redirect("/dashboard/v1") },
+  { path: "/", loader: () => redirect("/dashboard/v2") },
   { path: "*", element: <Error404 /> }
 ]);
 

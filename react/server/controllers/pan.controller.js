@@ -1,5 +1,7 @@
 import axios from 'axios';
 import db from '../database/db.js';
+import { v4 as uuidv4 } from 'uuid';
+
 
 export const fetchPanDetailedController = async (req, res) => {
   const connection = await db.getConnection();
@@ -329,3 +331,753 @@ export const fetchPanLiteController = async (req, res) => {
   }
 };
 
+export const fetchPanNameController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, pan_number, file_no, consent } = req.body;
+
+    if (!usr_ser_id || !pan_number || !file_no || consent !== 'Y') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payload',
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Service not allowed',
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient credits',
+      });
+    }
+
+    /* ================= GRIDLINES API ================= */
+    const apiRes = await axios.post(
+      'https://api.gridlines.io/pan-api/fetch-card-name',
+      {
+        pan_number,
+        consent,
+        consent_text: 'I provide consent to process my pan information.',
+      },
+      {
+        headers: {
+          'X-API-Key': process.env.GRIDLINES_API_KEY,
+          'X-Auth-Type': 'API-Key',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    /* ================= FAIL CASE (NO CREDIT CUT) ================= */
+    if (code !== '1018') {
+      await connection.rollback();
+      return res.json({
+        success: true,
+        data: apiRes.data,
+      });
+    }
+
+    /* ================= NORMALIZE PAN DATA ✅ ================= */
+    const rawPanData = apiRes.data?.data?.pan_data || {};
+console.log("rawPanData" , rawPanData)
+   const normalizedPanData = {
+  pan_number: rawPanData.document_id || pan_number,
+  name: rawPanData.card_name || '-',
+};
+
+
+    /* ================= WALLET DEDUCTION ================= */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions (
+        users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by
+      ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs (
+        users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        'PAN_NAME_FETCH',
+        'success',
+        walletTxn.insertId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    /* ================= FINAL RESPONSE ================= */
+    res.json({
+      success: true,
+      data: {
+        ...apiRes.data,
+        data: {
+          ...apiRes.data.data,
+          pan_data: normalizedPanData, // ✅ UI-friendly
+        },
+      },
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+} catch (error) {
+  await connection.rollback();
+
+  // 🔴 Handle Gridlines upstream / govt server error gracefully
+  if (error.response?.data) {
+    return res.status(200).json({
+      success: false,
+      data: error.response.data, // pass exact Gridlines error
+      message: 'PAN service temporarily unavailable. Please retry.',
+    });
+  }
+
+  console.error('❌ PAN NAME Error:', error);
+  res.status(500).json({
+    success: false,
+    message: 'PAN name fetch failed',
+  });
+}finally {
+    connection.release();
+  }
+};
+
+
+export const verifyBusinessPanController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, pan_number, file_no, consent } = req.body;
+
+    if (!usr_ser_id || !pan_number || !file_no || consent !== 'Y') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payload',
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Service not allowed',
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient credits',
+      });
+    }
+
+    /* ================= GRIDLINES API ================= */
+    const apiRes = await axios.post(
+      'https://api.gridlines.io/pan-api/business-verify',
+      {
+        pan_number,
+        consent,
+      },
+      {
+        headers: {
+          'X-API-Key': process.env.GRIDLINES_API_KEY,
+          'X-Auth-Type': 'API-Key',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    // ❌ PAN NOT FOUND / INVALID → NO DEDUCTION
+    if (code !== '1013') {
+      await connection.rollback();
+      return res.json({
+        success: true,
+        data: apiRes.data,
+      });
+    }
+
+    /* ================= WALLET DEDUCTION ================= */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions (
+        users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by
+      ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs (
+        users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        'BUSINESS_PAN_VERIFY',
+        'success',
+        walletTxn.insertId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      data: apiRes.data,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('❌ Business PAN Error:', error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: 'Business PAN verification failed',
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+export const validatePanController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, pan_number, date_of_birth, file_no, consent } = req.body;
+
+    if (!usr_ser_id || !pan_number || !date_of_birth || !file_no || consent !== 'Y') {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE CHECK ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ? AND users_id = ? AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({ success: false, message: 'Service not allowed' });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET CHECK ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Insufficient credits' });
+    }
+
+    /* ===== GRIDLINES PAN VALIDATE API ===== */
+    const apiRes = await axios.post(
+      'https://api.gridlines.io/pan-api/validate-details',
+      {
+        pan_number,
+        date_of_birth,
+        consent,
+      },
+      {
+        headers: {
+          'X-API-Key': process.env.GRIDLINES_API_KEY,
+          'X-Auth-Type': 'API-Key',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const apiCode = apiRes.data?.data?.code;
+
+    /* ===== FAILURE CASE (NO CREDIT CUT) ===== */
+    if (!['1000', '1018'].includes(apiCode)) {
+      await connection.rollback();
+      return res.json({
+        success: true,
+        data: apiRes.data,
+      });
+    }
+
+    /* ===== WALLET DEDUCTION ===== */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId]
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId]
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        'PAN_VALIDATE_DOB',
+        'success',
+        walletTxn.insertId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: apiRes.data,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+  await connection.rollback();
+
+  // Gridlines error response
+  if (error.response?.data) {
+    return res.status(200).json({
+      success: false,
+      data: error.response.data,
+      message: 'PAN service temporarily unavailable. Please retry.',
+    });
+  }
+
+  console.error('❌ PAN VALIDATE ERROR:', error);
+  res.status(500).json({
+    success: false,
+    message: 'PAN validation failed',
+  });
+}finally {
+    connection.release();
+  }
+};
+
+
+
+
+export const fetchPanEssentialsController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, pan_number, file_no, consent } = req.body;
+
+    /* ===== VALIDATION ===== */
+    if (!usr_ser_id || !pan_number || !file_no || consent !== 'Y') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payload',
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE CHECK ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Service not allowed',
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET CHECK ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient credits',
+      });
+    }
+
+    /* ===== GRIDLINES PAN ESSENTIALS API ===== */
+    const apiRes = await axios.post(
+      'https://api.gridlines.io/pan-api/fetch-essentials',
+      { pan_number, consent },
+      {
+        headers: {
+          'X-API-Key': process.env.GRIDLINES_API_KEY,
+          'X-Auth-Type': 'API-Key',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    /* ❌ FAILURE → NO CREDIT DEDUCTION */
+    if (code !== '1000') {
+      await connection.rollback();
+
+      return res.status(200).json({
+        success: false,
+        message: apiRes.data?.data?.message || 'PAN validation failed',
+        data: {
+          code,
+          pan_data: {
+            document_type: 'PAN',
+            pan_number,
+            name: '-',
+            date_of_birth: '-',
+          },
+        },
+      });
+    }
+
+    /* ===== SUCCESS CASE ===== */
+    const panData = apiRes.data?.data?.pan_data || {};
+
+    const normalizedPanData = {
+      document_type: panData.document_type || 'PAN',
+      pan_number,
+      name: panData.name || '-',
+      date_of_birth: panData.date_of_birth || '-',
+    };
+
+    const closingBalance = openingBalance - creditsUsed;
+
+    /* ===== WALLET UPDATE ===== */
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        'PAN_FETCH_ESSENTIALS',
+        'success',
+        walletTxn.insertId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    /* ===== FINAL RESPONSE ===== */
+    res.json({
+      success: true,
+      data: {
+        code,
+        message: apiRes.data?.data?.message,
+        pan_data: normalizedPanData,
+      },
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('❌ PAN ESSENTIALS ERROR:', error.response?.data || error);
+
+    res.status(500).json({
+      success: false,
+      message: 'PAN essentials fetch failed',
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+
+
+
+
+export const pullPanDigilockerController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+    const { usr_ser_id, panno, PANFullName, file_no, consent } = req.body;
+
+    if (!usr_ser_id || !panno || !PANFullName || !file_no || consent !== 'Y') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payload',
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE CHECK ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) {
+      await connection.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Service not allowed',
+      });
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET CHECK ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    if (openingBalance < creditsUsed) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient credits',
+      });
+    }
+
+    /* ===== GRIDLINES DIGILOCKER PAN PULL ===== */
+    const apiRes = await axios.post(
+      'https://api.gridlines.io/digilocker/pan/pull-document',
+      {
+        parameters: {
+          panno: panno.trim().toUpperCase(),
+          PANFullName: PANFullName.trim().toUpperCase(),
+        },
+      },
+      {
+        headers: {
+          'X-API-Key': process.env.GRIDLINES_API_KEY,
+          'X-Auth-Type': '', // ✅ THIS IS THE KEY FIX
+          'X-Transaction-ID': uuidv4(),
+          'X-Reference-ID': uuidv4(),
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    const code = apiRes.data?.data?.code;
+
+    /* ❌ FAILURE — NO CREDIT CUT */
+    if (!['1016', '1015'].includes(code)) {
+      await connection.rollback();
+      return res.status(200).json({
+        success: false,
+        data: {
+          code,
+          message: apiRes.data?.data?.message,
+        },
+      });
+    }
+
+    /* ===== CREDIT DEDUCTION ===== */
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        creditsUsed,
+        'PAN_DIGILOCKER_PULL',
+        'success',
+        walletTxn.insertId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: {
+        code,
+        message: apiRes.data?.data?.message,
+        issued_file: apiRes.data?.data?.issued_file || null,
+      },
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('❌ DIGILOCKER PAN ERROR:', error.response?.data || error);
+    res.status(500).json({
+      success: false,
+      message: 'PAN Digilocker pull failed',
+    });
+  } finally {
+    connection.release();
+  }
+};

@@ -9,7 +9,7 @@ import TopAuthorList from "./TopAuthorList";
 import LastMonthSummary from "./LastMonthSummary";
 
 export default function Dashboard2() {
-  const routeSegments = [{ name: "Dashboard", path: "/dashboard" }, { name: "Version 2" }];
+  const routeSegments = [{ name: "Dashboard", path: "/dashboard" }, { name: "RISQ Corporate Management Private Ltd." }];
 
   return (
     <div>
@@ -20,21 +20,22 @@ export default function Dashboard2() {
         <ActivityCards />
 
         {/* SALES REPORT GRAPH */}
-        <Sales />
+          {/* <UserList /> */}
+        {/* <Sales /> */}
 
         {/* LAST MONTH SUMMARY GRAPH */}
-        <LastMonthSummary />
+        {/* <LastMonthSummary /> */}
 
         {/* TOP AUTHOR LIST TABLE */}
-        <TopAuthorList />
+        {/* <TopAuthorList /> */}
       </Row>
 
       <Row>
         {/* NEW USER LIST TABLE */}
-        <UserList />
+        {/* <UserList /> */}
 
         {/* TOTAL SALES LIST TABLE */}
-        <TotalSales />
+        {/* <TotalSales /> */}
       </Row>
     </div>
   );

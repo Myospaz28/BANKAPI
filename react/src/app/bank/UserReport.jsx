@@ -23,7 +23,7 @@ export default function UserReport() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await api.get("api/getUsersController");
+        const res = await api.get("api/getUsersController");
       setUsers(res.data.data || []);
     } catch (err) {
       console.error("❌ Failed to load users", err);

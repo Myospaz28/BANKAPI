@@ -53,7 +53,7 @@ export default function GullSearch({ open, handleClose }) {
   return (
     <div className={clsx({ "search-ui": true, open: open })}>
       <div className="d-flex justify-content-between align-items-center search-header o-hidden">
-        <img src="/assets/images/logo.png" alt="" className="logo float-left" />
+        <img src="/assets/images/logo.jpeg" alt="" className="logo float-left" />
         <button className="search-close btn btn-icon bg-transparent mt-2" onClick={handleClose}>
           <i className="i-Close-Window text-22 text-muted" />
         </button>

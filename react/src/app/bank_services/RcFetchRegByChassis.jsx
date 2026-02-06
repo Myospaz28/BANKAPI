@@ -219,7 +219,7 @@ export default function RcFetchRegByChassis() {
 
           <Button
             className="mt-3"
-            variant="success"
+            variant="primary"
             disabled={loading}
             onClick={handleFetch}
           >

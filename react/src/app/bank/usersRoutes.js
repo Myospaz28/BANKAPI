@@ -21,6 +21,7 @@ const UserWalletStatement = lazy(() => import("./UserWalletStatement.jsx"));
 
 
 const usersRoutes = [
+
   { path: "/users/add", element: <AddUser /> },
   { path: "/users/add-admin", element: <AdminAddUser /> },
   { path: "/users/user-list", element: <UserList /> },
@@ -38,6 +39,8 @@ const usersRoutes = [
   { path: "/services/UserCategoryServices/:mas_cat_id", element: <UserCategoryServices /> },
   { path: "/report/userReport", element: <UserReport /> },
   { path: "/users/:userId/wallet-statement", element: <UserWalletStatement /> },
+  
 ];
+
 
 export default usersRoutes;

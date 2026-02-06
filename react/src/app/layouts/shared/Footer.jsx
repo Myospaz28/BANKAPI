@@ -29,7 +29,7 @@ export default function Footer() {
             </a>
 
             <div className="d-flex align-items-center">
-              <img className="logo" src="/assets/images/logo.png" alt="Logo" />
+              <img className="logo" src="/assets/images/logo.jpeg" alt="Logo" />
               <p className="m-0 line-height-1">&copy; 2019 Gull HTML | All rights reserved</p>
             </div>
           </div>

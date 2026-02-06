@@ -120,25 +120,25 @@ export default function FetchPanLite() {
     content: [
       { text: 'PAN Lite Verification Report', style: 'header' },
 
-      {
-        table: {
-          widths: ['35%', '65%'],
-          body: [
-            ['Request ID', safe(api.request_id)],
-            ['API Status', safe(api.status)],
-            ['Response Code', safe(api.data?.code)],
-            ['Response Message', safe(api.data?.message)],
-            ['API Path', safe(api.path)],
-            [
-              'Timestamp',
-              api.timestamp
-                ? new Date(api.timestamp).toLocaleString()
-                : '-',
-            ],
-          ],
-        },
-        marginBottom: 15,
-      },
+      // {
+      //   table: {
+      //     widths: ['35%', '65%'],
+      //     body: [
+      //       ['Request ID', safe(api.request_id)],
+      //       ['API Status', safe(api.status)],
+      //       ['Response Code', safe(api.data?.code)],
+      //       ['Response Message', safe(api.data?.message)],
+      //       ['API Path', safe(api.path)],
+      //       [
+      //         'Timestamp',
+      //         api.timestamp
+      //           ? new Date(api.timestamp).toLocaleString()
+      //           : '-',
+      //       ],
+      //     ],
+      //   },
+      //   marginBottom: 15,
+      // },
 
       { text: 'Input Details', style: 'subHeader' },
 

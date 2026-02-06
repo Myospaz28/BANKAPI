@@ -110,7 +110,6 @@ export default function FetchPanDetailed() {
   };
 
   /* ================= EXPORT PDF ================= */
-  /* ================= EXPORT PDF (ALL PAN FIELDS) ================= */
   const exportPdf = () => {
     const d = result?.data?.pan_data;
     if (!d) return;
@@ -251,7 +250,7 @@ export default function FetchPanDetailed() {
             onChange={(e) => setConsent(e.target.checked)}
           />
 
-          <Button className="mt-3" disabled={loading} onClick={handleFetch}>
+          <Button className="mt-3" disabled={loading}     onClick={handleFetch}>
             {loading ? <Spinner size="sm" /> : 'Fetch PAN'}
           </Button>
         </Card>

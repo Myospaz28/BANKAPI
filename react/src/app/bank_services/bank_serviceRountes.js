@@ -6,6 +6,8 @@ const RcFetchLite = lazy(() => import("./RcFetchLite.jsx"));
 const RcFetchContact = lazy(() => import("./RcFetchContact.jsx"));
 const RcFetchRegByChassis = lazy(() => import("./RcFetchRegByChassis.jsx"));
 const FastagFetchDetailed = lazy(() => import("./FastagFetchDetailed.jsx"));
+const FetchRcEchallan = lazy(() => import("./FetchRcEchallan.jsx"));
+const RcFetchDetailedByChassis = lazy(() => import("./RcFetchDetailedByChassis.jsx"));
 
 
 const bank_serviceRountes = [
@@ -16,6 +18,8 @@ const bank_serviceRountes = [
   { path: "/services/RcFetchContact", element: <RcFetchContact /> },
   { path: "/services/RcFetchRegByChassis", element: <RcFetchRegByChassis /> },
   { path: "/services/FastagFetchDetailed", element: <FastagFetchDetailed /> },
+  { path: "/services/FetchRcEchallan", element: <FetchRcEchallan /> },
+  { path: "/services/RcFetchDetailedByChassis", element: <RcFetchDetailedByChassis /> },
 ];
 
 export default bank_serviceRountes;
