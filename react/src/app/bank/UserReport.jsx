@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Formik } from "formik";
 import * as yup from "yup";
 
+import swal from "sweetalert2";
 import api from "./../services/api.js";
 
 export default function UserReport() {
@@ -12,21 +13,36 @@ export default function UserReport() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [userRole, setUserRole] = useState(null);
+
   const [showEdit, setShowEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   /* ================= FETCH USERS ================= */
   useEffect(() => {
     fetchUsers();
+    fetchLoggedInUser();
   }, []);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-        const res = await api.get("api/getUsersController");
+      const res = await api.get("api/getUsersController");
       setUsers(res.data.data || []);
     } catch (err) {
       console.error("❌ Failed to load users", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLoggedInUser = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("api/getLoggedInUserController");
+      setUserRole(res.data?.data || null);
+    } catch (error) {
+      swal.fire("Error", "Failed to load user profile", "error");
     } finally {
       setLoading(false);
     }
@@ -93,7 +109,6 @@ export default function UserReport() {
                     </td>
 
                     <td>
-                  
                       <span
                         className="cursor-pointer text-info me-3"
                         title="View Wallet Statement"
@@ -101,8 +116,19 @@ export default function UserReport() {
                           navigate(`/users/${user.users_id}/wallet-statement`)
                         }
                       >
-                        <i className="nav-icon i-File-Clipboard-Text--Image font-weight-bold" />
+                        <i className="nav-icon i-Receipt font-weight-bold" />
                       </span>
+                      {userRole?.role?.toLowerCase() === "admin" && (
+                        <span
+                          className="cursor-pointer text-info me-3"
+                          title="User Login Logs"
+                          onClick={() =>
+                            navigate(`/users/${user.users_id}/logs`)
+                          }
+                        >
+                          <i className="nav-icon i-File-Clipboard-Text--Image font-weight-bold" />
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -110,9 +136,42 @@ export default function UserReport() {
             </tbody>
           </Table>
         </Card>
-      </Col>
+        {userRole?.role?.toLowerCase() === "admin" && (
+          <Row className="mt-4">
+            <Col md={12}>
+              <Card body className="text-center shadow-sm">
+                <div className="d-flex flex-column align-items-center">
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      background: "#0d6efd",
+                      color: "#fff",
+                      fontSize: "28px",
+                    }}
+                  >
+                    <i className="nav-icon i-Bar-Chart"></i>
+                  </div>
 
-    
+                  <h5 className="fw-bold mb-1">Overall Report</h5>
+
+                  <p className="text-muted mb-3">
+                    View combined wallet statement of all users
+                  </p>
+
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate(`/users/all/wallet-statement`)}
+                  >
+                    View Report
+                  </Button>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </Col>
     </Row>
   );
 }

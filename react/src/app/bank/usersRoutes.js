@@ -18,10 +18,9 @@ const BankAccountVerification = lazy(() => import("./BankAccountVerification.jsx
 const UserCategoryServices = lazy(() => import("./UserCategoryServices.jsx"));
 const UserReport = lazy(() => import("./UserReport.jsx"));
 const UserWalletStatement = lazy(() => import("./UserWalletStatement.jsx"));
-
+const UserLoginLogs = lazy(() => import("./UserLoginLogs.jsx"));
 
 const usersRoutes = [
-
   { path: "/users/add", element: <AddUser /> },
   { path: "/users/add-admin", element: <AdminAddUser /> },
   { path: "/users/user-list", element: <UserList /> },
@@ -36,10 +35,10 @@ const usersRoutes = [
   { path: "/services/CCRVFetchReport", element: <CCRVFetchReport /> },
   { path: "/services/GSTINVerification", element: <GSTINVerification /> },
   { path: "/services/bankaccountverification", element: <BankAccountVerification /> },
-  { path: "/services/UserCategoryServices/:mas_cat_id", element: <UserCategoryServices /> },
+  { path: "/services/UserCategoryServices", element: <UserCategoryServices /> },
   { path: "/report/userReport", element: <UserReport /> },
   { path: "/users/:userId/wallet-statement", element: <UserWalletStatement /> },
-  
+  { path: "/users/:userId/logs", element: <UserLoginLogs /> }
 ];
 
 

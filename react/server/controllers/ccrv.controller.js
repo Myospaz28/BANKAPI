@@ -357,7 +357,7 @@ export const ccrvRapidResultController1 = async (req, res) => {
 
 
 
-export const ccrvRapidResultController = async (req, res) => {
+export const ccrvRapidResultController2 = async (req, res) => {
   try {
     const { transactionId } = req.params;
 
@@ -393,4 +393,539 @@ export const ccrvRapidResultController = async (req, res) => {
       message: "Unable to fetch CCRV result",
     });
   }
+};
+
+
+export const checkCcrvRapidCacheController = async (req, res) => {
+
+  const connection = await db.getConnection();
+
+  try {
+
+    const { mas_ser_id, mas_cat_id, name, dob } = req.body;
+
+    console.log("🔎 [CCRV CACHE CHECK] Input:", {
+      mas_ser_id,
+      mas_cat_id,
+      name,
+      dob
+    });
+
+    const [[existing]] = await connection.query(
+      `SELECT response_status, fetched_at
+       FROM service_data_fetch_log
+       WHERE mas_ser_id=?
+       AND mas_cat_id=?
+       AND name=?
+       AND dob <=> ?
+       ORDER BY ser_fet_log_id DESC
+       LIMIT 1`,
+      [mas_ser_id, mas_cat_id, name, dob || null]
+    );
+
+    if (!existing) {
+
+      console.log("🟡 [CCRV CACHE] No cache found");
+
+      return res.json({ hasCache: false });
+
+    }
+
+    console.log("🟢 [CCRV CACHE FOUND]", existing);
+
+    if (existing.response_status === "success") {
+
+      return res.json({
+        hasCache: true,
+        lastFetchedAt: existing.fetched_at
+      });
+
+    }
+
+    return res.json({ hasCache: false });
+
+  } catch (err) {
+
+    console.error("❌ [CCRV CACHE ERROR]", err);
+
+    res.status(500).json({ success: false });
+
+  } finally {
+
+    connection.release();
+
+  }
+
+};
+export const executeCcrvRapidController = async (req, res) => {
+
+  const connection = await db.getConnection();
+
+  try {
+
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      name,
+      father_name,
+      address,
+      dob
+    } = req.body;
+
+    console.log("🚀 [CCRV SEARCH START]", {
+      userId,
+      file_no,
+      name
+    });
+
+    await connection.beginTransaction();
+
+    /* SERVICE CHECK */
+
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=?
+       AND users_id=?
+       AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) {
+
+      console.log("⛔ [SERVICE BLOCKED]");
+
+      throw new Error("Service not allowed");
+
+    }
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* WALLET CHECK */
+
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id=?
+       FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    console.log("💰 [WALLET BALANCE]", openingBalance);
+
+    if (openingBalance < creditsUsed)
+      throw new Error("Insufficient balance");
+
+    /* GRIDLINES SEARCH */
+
+    const payload = {
+      name,
+      father_name,
+      address,
+      consent: "Y",
+      callback_url: "https://api.risqcorporate.com/gridlines/ccrv"
+    };
+
+    if (dob) payload.date_of_birth = dob;
+
+    console.log("📡 [GRIDLINES REQUEST]", payload);
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/ccrv-api/rapid/search",
+      payload,
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const response = apiRes.data;
+
+    console.log("📡 [GRIDLINES RESPONSE]", response);
+
+    const code = response?.data?.code;
+
+    if (code !== "1016") {
+
+      console.log("⚠️ [GRIDLINES SEARCH FAILED]", code);
+
+      await connection.rollback();
+
+      return res.json({
+        success: true,
+        data: response
+      });
+
+    }
+
+    const transactionId = response.data.transaction_id;
+
+    console.log("🆔 [TRANSACTION ID]", transactionId);
+
+    /* WALLET DEDUCTION */
+
+    const closingBalance = openingBalance - creditsUsed;
+
+    await connection.query(
+      `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+      [closingBalance, userId]
+    );
+
+    console.log("💳 [WALLET DEDUCTED]", creditsUsed);
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id,transaction_type,amount,
+        opening_balance,closing_balance,
+        reference_type,created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId]
+    );
+
+    const walletTransactionId = walletTxn.insertId;
+
+    /* FETCH LOG */
+
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+      (mas_ser_id, mas_cat_id, file_number,
+       name, dob, transaction_id,
+       api_response, response_status,
+       http_status_code, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        name,
+        dob || null,
+        transactionId,
+        JSON.stringify(response),
+        "requested",
+        apiRes.status,
+        userId
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    console.log("🗂 [FETCH LOG CREATED]", serFetLogId);
+
+    /* USER SERVICE LOG */
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id,usr_ser_id,file_no,
+        input_payload,credits_used,
+        api_name,api_status,
+        wallet_transaction_id,
+        transaction_id,
+        ser_fet_log_id,
+        created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        JSON.stringify({ name, father_name, address, dob }),
+        creditsUsed,
+        "CCRV_RAPID",
+        "requested",
+        walletTransactionId,
+        transactionId,
+        serFetLogId,
+        userId
+      ]
+    );
+
+    await connection.commit();
+
+    console.log("✅ [CCRV SEARCH COMPLETED]");
+
+    res.json({
+      success: true,
+      data: response
+    });
+
+  } catch (err) {
+
+    await connection.rollback();
+
+    console.error("❌ [CCRV SEARCH ERROR]", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+
+  } finally {
+
+    connection.release();
+
+  }
+
+};
+export const ccrvRapidResultController = async (req, res) => {
+
+  try {
+
+    const { transactionId } = req.params;
+
+    const apiRes = await axios.get(
+      "https://api.gridlines.io/ccrv-api/rapid/result",
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "X-Transaction-ID": transactionId,
+        },
+        validateStatus: () => true
+      }
+    );
+
+    const data = apiRes.data;
+
+    /* HANDLE COMPLETED TRANSACTION */
+
+    if (data?.error?.code === "TRANSACTION_ALREADY_COMPLETED") {
+
+      return res.json({
+        success: true,
+        alreadyCompleted: true
+      });
+
+    }
+
+    return res.json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+
+    console.error(
+      "❌ CCRV RESULT ERROR:",
+      error.response?.data || error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to fetch CCRV result",
+    });
+  }
+};
+
+export const getCcrvResultController1 = async (req, res) => {
+
+  try {
+
+    const { transactionId } = req.params;
+
+    const [[data]] = await db.query(
+      `SELECT response_status, api_response
+       FROM service_data_fetch_log
+       WHERE transaction_id = ?`,
+      [transactionId]
+    );
+
+    if (!data) {
+      return res.json({ status: "not_found" });
+    }
+
+    if (data.response_status === "requested") {
+      return res.json({ status: "processing" });
+    }
+
+    return res.json({
+      status: "completed",
+      data: JSON.parse(data.api_response)
+    });
+
+  } catch (err) {
+
+    console.error("❌ GET CCRV RESULT ERROR:", err);
+
+    res.status(500).json({ success: false });
+
+  }
+};
+
+
+export const gridlinesCcrvCallbackController = async (req, res) => {
+
+  const connection = await db.getConnection();
+
+  try {
+
+    const payload = req.body;
+
+    console.log("📩 [GRIDLINES CALLBACK RECEIVED]", payload);
+
+    const transactionId = payload?.transaction_id;
+
+    if (!transactionId) {
+
+      console.log("⚠️ [CALLBACK INVALID - NO TRANSACTION ID]");
+
+      return res.status(400).json({ success: false });
+
+    }
+
+    await connection.query(
+      `UPDATE service_data_fetch_log
+       SET api_response=?,
+           response_status='success'
+       WHERE transaction_id=?`,
+      [JSON.stringify(payload), transactionId]
+    );
+
+    await connection.query(
+      `UPDATE user_service_logs
+       SET api_status='success'
+       WHERE transaction_id=?`,
+      [transactionId]
+    );
+
+    console.log("✅ [CALLBACK RESULT SAVED]", transactionId);
+
+    res.json({ success: true });
+
+  } catch (err) {
+
+    console.error("❌ [CALLBACK ERROR]", err);
+
+    res.status(500).json({ success: false });
+
+  } finally {
+
+    connection.release();
+
+  }
+
+};
+export const getCcrvResultController = async (req, res) => {
+
+  const connection = await db.getConnection();
+
+  try {
+
+    const { transactionId } = req.params;
+
+    console.log("🔎 [RESULT CHECK]", transactionId);
+
+    const [[data]] = await connection.query(
+      `SELECT response_status, api_response,
+              fetched_at, result_api_checked
+       FROM service_data_fetch_log
+       WHERE transaction_id=?`,
+      [transactionId]
+    );
+
+    if (!data) {
+
+      console.log("⚠️ [RESULT NOT FOUND]");
+
+      return res.json({ status: "not_found" });
+
+    }
+
+    if (data.response_status === "success") {
+
+      console.log("✅ [RESULT RETURNED FROM DB]");
+
+      return res.json({
+        status: "completed",
+        data: JSON.parse(data.api_response)
+      });
+
+    }
+
+    const diff =
+      (Date.now() - new Date(data.fetched_at)) / 1000;
+
+    console.log("⏳ [WAITING CALLBACK]", diff, "seconds");
+
+    if (diff < 60) {
+
+      return res.json({ status: "processing" });
+
+    }
+
+    if (data.result_api_checked === 1) {
+
+      console.log("🔁 [FALLBACK ALREADY CHECKED]");
+
+      return res.json({ status: "processing" });
+
+    }
+
+    console.log("📡 [FALLBACK GRIDLINES RESULT API]");
+
+    const apiRes = await axios.get(
+      "https://api.gridlines.io/ccrv-api/rapid/result",
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+          "X-Transaction-ID": transactionId
+        },
+        validateStatus: () => true
+      }
+    );
+
+    const response = apiRes.data;
+
+    console.log("📡 [GRIDLINES RESULT RESPONSE]", response);
+
+    const code = response?.data?.code;
+
+    await connection.query(
+      `UPDATE service_data_fetch_log
+       SET result_api_checked=1
+       WHERE transaction_id=?`,
+      [transactionId]
+    );
+
+    if (code === "1019" || code === "1020") {
+
+      console.log("✅ [RESULT FETCHED VIA FALLBACK]");
+
+      await connection.query(
+        `UPDATE service_data_fetch_log
+         SET api_response=?, response_status='success'
+         WHERE transaction_id=?`,
+        [JSON.stringify(response), transactionId]
+      );
+
+      return res.json({
+        status: "completed",
+        data: response
+      });
+
+    }
+
+    res.json({ status: "processing" });
+
+  } catch (err) {
+
+    console.error("❌ [RESULT ERROR]", err);
+
+    res.status(500).json({ success: false });
+
+  } finally {
+
+    connection.release();
+
+  }
+
 };

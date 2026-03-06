@@ -612,5 +612,6 @@ export const navigations = [
     icon: "i-Receipt",
     path: "/report/userReport",
     roles: ["admin", "bank"],
+    
   },
 ];

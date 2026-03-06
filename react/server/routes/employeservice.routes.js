@@ -2,6 +2,16 @@ import express from "express";
 
 import { verifyToken } from "../middleware/auth.middleware.js";
 import {
+  checkEmployerVerifyCache,
+  checkEmploymentHistoryCache,
+  checkLatestEmploymentCache,
+  checkLatestPassbookCache,
+  checkUanProfileCache,
+  executeEmployerVerifyController,
+  executeEmploymentHistoryController,
+  executeLatestEmploymentController,
+  executeLatestPassbookController,
+  executeUanProfileController,
   fetchEmployerVerifyController,
   fetchEmploymentHistoryByUanController,
   fetchLatestEmploymentByMobileController,
@@ -39,6 +49,58 @@ router.post(
   "/fetchEmployerVerifyController",
   verifyToken,
   fetchEmployerVerifyController,
+);
+
+// new routes can be added here
+/* ===== EXECUTE FETCH ===== */
+router.post(
+  "/checkEmploymentHistoryCache",
+  verifyToken,
+  checkEmploymentHistoryCache,
+);
+
+router.post(
+  "/executeEmploymentHistory",
+  verifyToken,
+  executeEmploymentHistoryController,
+);
+
+/* ===== EXECUTE SERVICE ===== */
+
+router.post(
+  "/checkLatestEmploymentCache",
+  verifyToken,
+  checkLatestEmploymentCache,
+);
+
+router.post(
+  "/executeLatestEmployment",
+  verifyToken,
+  executeLatestEmploymentController,
+);
+
+/* ================= EXECUTE SERVICE ================= */
+
+router.post("/checkLatestPassbookCache", verifyToken, checkLatestPassbookCache);
+
+router.post(
+  "/executeLatestPassbook",
+  verifyToken,
+  executeLatestPassbookController,
+);
+
+/* ================= EXECUTE UAN PROFILE ================= */
+router.post("/checkUanProfileCache", verifyToken, checkUanProfileCache);
+
+router.post("/executeUanProfile", verifyToken, executeUanProfileController);
+
+/* ================= EMPLOYER VERIFY CACHE ================= */
+router.post("/checkEmployerVerifyCache", verifyToken, checkEmployerVerifyCache);
+
+router.post(
+  "/executeEmployerVerify",
+  verifyToken,
+  executeEmployerVerifyController,
 );
 
 export default router;

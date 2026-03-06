@@ -3,6 +3,10 @@ import multer from "multer";
 
 import { verifyToken } from "../middleware/auth.middleware.js";
 import {
+  checkGenerateMrzCache,
+  checkVerifyMrzCache,
+  executeGenerateMrzController,
+  executeVerifyMrzController,
   fetchGenerateMrzController,
   fetchPassportDetailsController,
   fetchPassportOcrController,
@@ -42,5 +46,14 @@ router.post(
   verifyToken,
   fetchPassportVerifyController,
 );
+
+// new routes can be added here
+
+router.post("/checkGenerateMrzCache", verifyToken, checkGenerateMrzCache);
+
+router.post("/executeGenerateMrz", verifyToken, executeGenerateMrzController);
+
+router.post("/checkVerifyMrzCache", verifyToken, checkVerifyMrzCache);
+router.post("/executeVerifyMrz", verifyToken, executeVerifyMrzController);
 
 export default router;

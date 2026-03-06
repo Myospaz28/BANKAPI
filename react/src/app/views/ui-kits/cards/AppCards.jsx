@@ -144,9 +144,11 @@
 import api from "./../../../services/api.js";
 import { Fragment, useEffect, useState } from "react";
 import { Card, Col, Row, Spinner, Badge } from "react-bootstrap";
+import { Layers ,ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import UserSessionCard from "./UserSessionCard.jsx";
+import { encryptId } from "@utils.js";
 
 export default function AppCards() {
   const navigate = useNavigate();
@@ -266,7 +268,7 @@ export default function AppCards() {
               width: 80,
               height: 80,
               borderRadius: "50%",
-              backgroundColor: "#000",
+              backgroundColor: "#257428",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -287,9 +289,10 @@ export default function AppCards() {
           disabled={!isWithinSession}
           title={!isWithinSession ? disableReason : ""}
           onClick={() =>
-            navigate(`/services/UserCategoryServices/${category.mas_cat_id}`, {
+            navigate(`/services/UserCategoryServices`, {
               state: {
                 categoryName: category.category_name,
+                mas_cat_id : category.mas_cat_id
               },
             })
           }
@@ -305,6 +308,57 @@ export default function AppCards() {
       </Card>
     </Col>
   );
+const CategoryCard2 = ({ category }) => (
+  <Col md={4}>
+    <Card
+      body
+      className="mb-4 shadow-sm border-0 border-start border-4 border-primary bg-primary bg-opacity-10"
+    >
+      {/* Icon */}
+      <div className="mb-3">
+        <i
+          className="i-Folder text-primary"
+          style={{ fontSize: 32 }}
+        />
+      </div>
+
+      {/* Title */}
+      <h5 className="fw-semibold text-dark mb-1">
+        {category.category_name}
+      </h5>
+
+      {/* Subtitle */}
+      <p className="text-success small mb-3">
+        Click to view available services
+      </p>
+
+      {/* Button */}
+      <button
+        className={`btn ${
+          isWithinSession ? "btn-primary" : "btn-outline-primary"
+        } btn-sm px-3`}
+        disabled={!isWithinSession}
+        title={!isWithinSession ? disableReason : ""}
+        onClick={() =>
+          navigate(`/services/UserCategoryServices`, {
+            state: {
+              categoryName: category.category_name,
+              mas_cat_id: category.mas_cat_id,
+            },
+          })
+        }
+      >
+        {isWithinSession ? "View Services" : "Service Unavailable"}
+      </button>
+
+      {!isWithinSession && (
+        <small className="text-danger d-block mt-2">
+          {disableReason}
+        </small>
+      )}
+    </Card>
+  </Col>
+);
 
   /* ================= UI ================= */
 

@@ -822,3 +822,890 @@ export const fetchPassportVerifyController = async (req, res) => {
     connection.release();
   }
 };
+
+// new controllers can be added here
+
+export const checkGenerateMrzCache = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const { mas_ser_id, mas_cat_id, passport_number } = req.body;
+
+    const [[existing]] = await connection.query(
+      `SELECT *
+       FROM service_data_fetch_log
+       WHERE mas_ser_id = ?
+         AND mas_cat_id = ?
+         AND passport_number = ?
+       ORDER BY ser_fet_log_id DESC
+       LIMIT 1`,
+      [mas_ser_id, mas_cat_id, passport_number],
+    );
+
+    if (existing) {
+      return res.json({
+        hasCache: true,
+        lastFetchedAt: existing.fetched_at,
+      });
+    }
+
+    return res.json({ hasCache: false });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  } finally {
+    connection.release();
+  }
+};
+
+// export const executeGenerateMrzController = async (req, res) => {
+//   const connection = await db.getConnection();
+
+//   try {
+//     const userId = req.user.userId;
+
+//     const {
+//       usr_ser_id,
+//       mas_ser_id,
+//       mas_cat_id,
+//       file_no,
+//       country_code,
+//       passport_number,
+//       surname,
+//       given_name,
+//       gender,
+//       date_of_birth,
+//       date_of_expiry,
+//       use_cache,
+//     } = req.body;
+
+//     await connection.beginTransaction();
+
+//     /* ===== SERVICE CHECK ===== */
+//     const [[service]] = await connection.query(
+//       `SELECT actual_credits
+//        FROM user_services
+//        WHERE usr_ser_id = ?
+//          AND users_id = ?
+//          AND status = 'active'
+//        FOR UPDATE`,
+//       [usr_ser_id, userId],
+//     );
+
+//     if (!service) throw new Error("Service not allowed");
+
+//     const creditsUsed = Number(service.actual_credits);
+
+//     /* ===== WALLET CHECK ===== */
+//     const [[user]] = await connection.query(
+//       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+//       [userId],
+//     );
+
+//     if (user.wallet_amount < creditsUsed)
+//       throw new Error("Insufficient balance");
+
+//     const openingBalance = Number(user.wallet_amount);
+//     const closingBalance = openingBalance - creditsUsed;
+
+//     let fullResponse;
+//     let responseStatus = "UNKNOWN";
+//     let requestId = null;
+//     let transactionId = null;
+
+//     /* ================= CACHE FLOW ================= */
+//     if (use_cache) {
+//       const [[existing]] = await connection.query(
+//         `SELECT *
+//          FROM service_data_fetch_log
+//          WHERE mas_ser_id = ?
+//            AND mas_cat_id = ?
+//            AND passport_number = ?
+//          ORDER BY ser_fet_log_id DESC
+//          LIMIT 1`,
+//         [mas_ser_id, mas_cat_id, passport_number],
+//       );
+
+//       if (!existing) throw new Error("No cache available");
+
+//       fullResponse =
+//         typeof existing.api_response === "string"
+//           ? JSON.parse(existing.api_response)
+//           : existing.api_response;
+
+//       responseStatus = existing.response_status;
+//       requestId = fullResponse?.request_id || null;
+//       transactionId = fullResponse?.transaction_id || null;
+//     } else {
+//       const apiRes = await axios.post(
+//         "https://api.gridlines.io/passport-api/generate-mrz",
+//         {
+//           country_code,
+//           passport_number,
+//           surname,
+//           given_name,
+//           gender,
+//           date_of_birth,
+//           date_of_expiry,
+//           consent: "Y",
+//         },
+//         {
+//           headers: {
+//             "X-API-Key": process.env.GRIDLINES_API_KEY,
+//             "X-Auth-Type": "API-Key",
+//             "Content-Type": "application/json",
+//           },
+//         },
+//       );
+
+//       fullResponse = apiRes.data;
+
+//       requestId = fullResponse?.request_id || null;
+//       transactionId = fullResponse?.transaction_id || null;
+
+//       const code = fullResponse?.data?.code;
+//       responseStatus = code === "1000" ? "SUCCESS" : "FAILED";
+
+//       await connection.query(
+//         `INSERT INTO service_data_fetch_log
+//          (mas_ser_id, mas_cat_id, file_number,
+//           passport_number, api_response,
+//           response_status, http_status_code, created_by)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+//         [
+//           mas_ser_id,
+//           mas_cat_id,
+//           file_no,
+//           passport_number,
+//           JSON.stringify(fullResponse),
+//           responseStatus,
+//           apiRes.status,
+//           userId,
+//         ],
+//       );
+//     }
+
+//     /* ===== WALLET DEDUCT ONLY IF SUCCESS ===== */
+//     let walletTransactionId = null;
+
+//     if (responseStatus === "SUCCESS") {
+//       await connection.query(
+//         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+//         [closingBalance, userId],
+//       );
+
+//       const [walletTxn] = await connection.query(
+//         `INSERT INTO wallet_transactions
+//          (users_id, transaction_type, amount,
+//           opening_balance, closing_balance,
+//           reference_type, created_by)
+//          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+//         [userId, creditsUsed, openingBalance, closingBalance, userId],
+//       );
+
+//       walletTransactionId = walletTxn.insertId;
+//     }
+
+//     /* ===== SERVICE LOG ===== */
+//     await connection.query(
+//       `INSERT INTO user_service_logs
+//        (users_id, usr_ser_id, file_no, credits_used,
+//         api_name, api_status, wallet_transaction_id,
+//         request_id, transaction_id, created_by)
+//        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//       [
+//         userId,
+//         usr_ser_id,
+//         file_no,
+//         responseStatus === "SUCCESS" ? creditsUsed : 0,
+//         "PASSPORT_GENERATE_MRZ",
+//         responseStatus,
+//         walletTransactionId,
+//         requestId,
+//         transactionId,
+//         userId,
+//       ],
+//     );
+
+//     await connection.commit();
+
+//     return res.json({
+//       success: true,
+//       data: fullResponse,
+//       wallet: {
+//         opening_balance: openingBalance,
+//         credits_used: responseStatus === "SUCCESS" ? creditsUsed : 0,
+//         closing_balance:
+//           responseStatus === "SUCCESS" ? closingBalance : openingBalance,
+//       },
+//     });
+//   } catch (err) {
+//     await connection.rollback();
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
+export const executeGenerateMrzController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      country_code,
+      passport_number,
+      surname,
+      given_name,
+      gender,
+      date_of_birth,
+      date_of_expiry,
+      use_cache,
+    } = req.body;
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    if (!user) throw new Error("User not found");
+
+    if (user.wallet_amount < creditsUsed)
+      throw new Error("Insufficient balance");
+
+    const openingBalance = Number(user.wallet_amount);
+    const closingBalance = openingBalance - creditsUsed;
+
+    /* ================= WALLET DEDUCTION ================= */
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    const walletTransactionId = walletTxn.insertId;
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({
+      country_code,
+      passport_number,
+      surname,
+      given_name,
+      gender,
+      date_of_birth,
+      date_of_expiry,
+    });
+
+    let fullResponse;
+    let responseStatus = "UNKNOWN";
+    let requestId = null;
+    let transactionId = null;
+    let serFetLogId = null;
+
+    /* ================= CACHE FLOW ================= */
+    if (use_cache) {
+      const [[existing]] = await connection.query(
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND passport_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, passport_number],
+      );
+
+      if (!existing) throw new Error("No cache available");
+
+      fullResponse =
+        typeof existing.api_response === "string"
+          ? JSON.parse(existing.api_response)
+          : existing.api_response;
+
+      responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      requestId = fullResponse?.request_id || null;
+      transactionId = fullResponse?.transaction_id || null;
+
+      /* ================= FRESH API CALL ================= */
+    } else {
+      const apiRes = await axios.post(
+        "https://api.gridlines.io/passport-api/generate-mrz",
+        {
+          country_code,
+          passport_number,
+          surname,
+          given_name,
+          gender,
+          date_of_birth,
+          date_of_expiry,
+          consent: "Y",
+        },
+        {
+          headers: {
+            "X-API-Key": process.env.GRIDLINES_API_KEY,
+            "X-Auth-Type": "API-Key",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      fullResponse = apiRes.data;
+
+      requestId = fullResponse?.request_id || null;
+      transactionId = fullResponse?.transaction_id || null;
+
+      const code = fullResponse?.data?.code;
+      responseStatus = code === "1000" ? "SUCCESS" : "FAILED";
+
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          passport_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          mas_ser_id,
+          mas_cat_id,
+          file_no,
+          passport_number,
+          JSON.stringify(fullResponse),
+          responseStatus,
+          apiRes.status,
+          userId,
+        ],
+      );
+
+      serFetLogId = fetchInsert.insertId;
+    }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
+
+    /* ================= SERVICE LOG ================= */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        request_id, transaction_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        inputPayload,
+        creditsUsed,
+        "PASSPORT_GENERATE_MRZ",
+        responseStatus,
+        walletTransactionId,
+        requestId,
+        transactionId,
+        serFetLogId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (err) {
+    await connection.rollback();
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+export const checkVerifyMrzCache = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const { mas_ser_id, mas_cat_id, passport_number } = req.body;
+
+    const [[existing]] = await connection.query(
+      `SELECT *
+       FROM service_data_fetch_log
+       WHERE mas_ser_id = ?
+         AND mas_cat_id = ?
+         AND passport_number = ?
+       ORDER BY ser_fet_log_id DESC
+       LIMIT 1`,
+      [mas_ser_id, mas_cat_id, passport_number],
+    );
+
+    if (existing) {
+      return res.json({
+        hasCache: true,
+        lastFetchedAt: existing.created_at,
+      });
+    }
+
+    return res.json({ hasCache: false });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  } finally {
+    connection.release();
+  }
+};
+
+// export const executeVerifyMrzController = async (req, res) => {
+//   const connection = await db.getConnection();
+
+//   try {
+//     const userId = req.user.userId;
+
+//     const {
+//       usr_ser_id,
+//       mas_ser_id,
+//       mas_cat_id,
+//       file_no,
+//       country_code,
+//       passport_number,
+//       surname,
+//       given_name,
+//       gender,
+//       date_of_birth,
+//       date_of_expiry,
+//       mrz_first_line,
+//       mrz_second_line,
+//       use_cache,
+//     } = req.body;
+
+//     await connection.beginTransaction();
+
+//     /* ===== SERVICE CHECK ===== */
+//     const [[service]] = await connection.query(
+//       `SELECT actual_credits
+//        FROM user_services
+//        WHERE usr_ser_id=? AND users_id=? AND status='active'
+//        FOR UPDATE`,
+//       [usr_ser_id, userId],
+//     );
+
+//     if (!service) throw new Error("Service not allowed");
+
+//     const creditsUsed = Number(service.actual_credits);
+
+//     /* ===== WALLET CHECK ===== */
+//     const [[user]] = await connection.query(
+//       `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+//       [userId],
+//     );
+
+//     if (user.wallet_amount < creditsUsed)
+//       throw new Error("Insufficient balance");
+
+//     const openingBalance = Number(user.wallet_amount);
+//     const closingBalance = openingBalance - creditsUsed;
+
+//     let fullResponse;
+//     let responseStatus = "UNKNOWN";
+//     let requestId = null;
+//     let transactionId = null;
+
+//     /* ================= CACHE FLOW ================= */
+//     if (use_cache) {
+//       const [[existing]] = await connection.query(
+//         `SELECT *
+//          FROM service_data_fetch_log
+//          WHERE mas_ser_id=? AND mas_cat_id=? AND passport_number=?
+//          ORDER BY ser_fet_log_id DESC
+//          LIMIT 1`,
+//         [mas_ser_id, mas_cat_id, passport_number],
+//       );
+
+//       if (!existing) throw new Error("No cache available");
+
+//       fullResponse =
+//         typeof existing.api_response === "string"
+//           ? JSON.parse(existing.api_response)
+//           : existing.api_response;
+
+//       responseStatus = existing.response_status;
+//       requestId = fullResponse?.request_id || null;
+//       transactionId = fullResponse?.transaction_id || null;
+//     } else {
+//       /* ===== GRIDLINES VERIFY API ===== */
+//       const apiRes = await axios.post(
+//         "https://api.gridlines.io/passport-api/verify-mrz",
+//         {
+//           country_code,
+//           passport_number,
+//           surname,
+//           given_name,
+//           gender,
+//           date_of_birth,
+//           date_of_expiry,
+//           mrz_first_line,
+//           mrz_second_line,
+//           consent: "Y",
+//         },
+//         {
+//           headers: {
+//             "X-API-Key": process.env.GRIDLINES_API_KEY,
+//             "X-Auth-Type": "API-Key",
+//             "Content-Type": "application/json",
+//           },
+//         },
+//       );
+
+//       fullResponse = apiRes.data;
+//       requestId = fullResponse?.request_id || null;
+//       transactionId = fullResponse?.transaction_id || null;
+
+//       const code = fullResponse?.data?.code;
+
+//       responseStatus =
+//         code === "1001" ? "VALID" : code === "1002" ? "INVALID" : "FAILED";
+
+//       await connection.query(
+//         `INSERT INTO service_data_fetch_log
+//          (mas_ser_id, mas_cat_id, file_number,
+//           passport_number, api_response,
+//           response_status, http_status_code, created_by)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+//         [
+//           mas_ser_id,
+//           mas_cat_id,
+//           file_no,
+//           passport_number,
+//           JSON.stringify(fullResponse),
+//           responseStatus,
+//           apiRes.status,
+//           userId,
+//         ],
+//       );
+//     }
+
+//     /* ===== WALLET DEDUCT ONLY IF VALID/INVALID ===== */
+//     let walletTransactionId = null;
+
+//     if (["VALID", "INVALID"].includes(responseStatus)) {
+//       await connection.query(
+//         `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+//         [closingBalance, userId],
+//       );
+
+//       const [walletTxn] = await connection.query(
+//         `INSERT INTO wallet_transactions
+//          (users_id, transaction_type, amount,
+//           opening_balance, closing_balance,
+//           reference_type, created_by)
+//          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+//         [userId, creditsUsed, openingBalance, closingBalance, userId],
+//       );
+
+//       walletTransactionId = walletTxn.insertId;
+//     }
+
+//     /* ===== SERVICE LOG ===== */
+//     await connection.query(
+//       `INSERT INTO user_service_logs
+//        (users_id, usr_ser_id, file_no, credits_used,
+//         api_name, api_status, wallet_transaction_id,
+//         request_id, transaction_id, created_by)
+//        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//       [
+//         userId,
+//         usr_ser_id,
+//         file_no,
+//         ["VALID", "INVALID"].includes(responseStatus) ? creditsUsed : 0,
+//         "PASSPORT_VERIFY_MRZ",
+//         responseStatus,
+//         walletTransactionId,
+//         requestId,
+//         transactionId,
+//         userId,
+//       ],
+//     );
+
+//     await connection.commit();
+
+//     return res.json({
+//       success: true,
+//       data: fullResponse,
+//       wallet: {
+//         opening_balance: openingBalance,
+//         credits_used: ["VALID", "INVALID"].includes(responseStatus)
+//           ? creditsUsed
+//           : 0,
+//         closing_balance: ["VALID", "INVALID"].includes(responseStatus)
+//           ? closingBalance
+//           : openingBalance,
+//       },
+//     });
+//   } catch (err) {
+//     await connection.rollback();
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
+export const executeVerifyMrzController = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      country_code,
+      passport_number,
+      surname,
+      given_name,
+      gender,
+      date_of_birth,
+      date_of_expiry,
+      mrz_first_line,
+      mrz_second_line,
+      use_cache,
+    } = req.body;
+
+    await connection.beginTransaction();
+
+    /* ================= SERVICE CHECK ================= */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ================= WALLET CHECK ================= */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
+      [userId],
+    );
+
+    if (!user) throw new Error("User not found");
+
+    if (user.wallet_amount < creditsUsed)
+      throw new Error("Insufficient balance");
+
+    const openingBalance = Number(user.wallet_amount);
+    const closingBalance = openingBalance - creditsUsed;
+
+    /* ================= WALLET DEDUCTION ================= */
+    await connection.query(
+      `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+      [closingBalance, userId],
+    );
+
+    const [walletTxn] = await connection.query(
+      `INSERT INTO wallet_transactions
+       (users_id, transaction_type, amount,
+        opening_balance, closing_balance,
+        reference_type, created_by)
+       VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
+    );
+
+    const walletTransactionId = walletTxn.insertId;
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({
+      country_code,
+      passport_number,
+      surname,
+      given_name,
+      gender,
+      date_of_birth,
+      date_of_expiry,
+      mrz_first_line,
+      mrz_second_line,
+    });
+
+    let fullResponse;
+    let responseStatus = "UNKNOWN";
+    let requestId = null;
+    let transactionId = null;
+    let serFetLogId = null;
+
+    /* ================= CACHE FLOW ================= */
+    if (use_cache) {
+      const [[existing]] = await connection.query(
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND passport_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, passport_number],
+      );
+
+      if (!existing) throw new Error("No cache available");
+
+      fullResponse =
+        typeof existing.api_response === "string"
+          ? JSON.parse(existing.api_response)
+          : existing.api_response;
+
+      responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      requestId = fullResponse?.request_id || null;
+      transactionId = fullResponse?.transaction_id || null;
+
+      /* ================= FRESH API CALL ================= */
+    } else {
+      const apiRes = await axios.post(
+        "https://api.gridlines.io/passport-api/verify-mrz",
+        {
+          country_code,
+          passport_number,
+          surname,
+          given_name,
+          gender,
+          date_of_birth,
+          date_of_expiry,
+          mrz_first_line,
+          mrz_second_line,
+          consent: "Y",
+        },
+        {
+          headers: {
+            "X-API-Key": process.env.GRIDLINES_API_KEY,
+            "X-Auth-Type": "API-Key",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      fullResponse = apiRes.data;
+
+      requestId = fullResponse?.request_id || null;
+      transactionId = fullResponse?.transaction_id || null;
+
+      const code = fullResponse?.data?.code;
+      responseStatus =
+        code === "1001" ? "VALID" : code === "1002" ? "INVALID" : "FAILED";
+
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          passport_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          mas_ser_id,
+          mas_cat_id,
+          file_no,
+          passport_number,
+          JSON.stringify(fullResponse),
+          responseStatus,
+          apiRes.status,
+          userId,
+        ],
+      );
+
+      serFetLogId = fetchInsert.insertId;
+    }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
+
+    /* ================= SERVICE LOG ================= */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        request_id, transaction_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        inputPayload,
+        creditsUsed,
+        "PASSPORT_VERIFY_MRZ",
+        responseStatus,
+        walletTransactionId,
+        requestId,
+        transactionId,
+        serFetLogId,
+        userId,
+      ],
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+      wallet: {
+        opening_balance: openingBalance,
+        credits_used: creditsUsed,
+        closing_balance: closingBalance,
+      },
+    });
+  } catch (err) {
+    await connection.rollback();
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};

@@ -121,11 +121,6 @@ export default function UdyamCertificateOCR() {
           </p>
         </Card>
 
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
         <Card body>
           <Form.Group>
             <Form.Label>

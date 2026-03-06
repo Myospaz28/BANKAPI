@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
-
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
+import JsonTableViewer from "../components/JsonTableViewer";
+
 pdfMake.vfs = pdfFonts.vfs;
 
-const Required = () => <span style={{ color: "red" }}> *</span>;
-const val = (v) => (v ? v : "-");
+const val = (v) => (v !== null && v !== undefined && v !== "" ? v : "-");
 
 export default function FetchVerifyIfsc() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name, credits } = state || {};
+  const { usr_ser_id, service_name, credits, mas_cat_id, mas_ser_id } =
+    state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -22,6 +23,8 @@ export default function FetchVerifyIfsc() {
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+
+  const Required = () => <span style={{ color: "red", marginLeft: 4 }}>*</span>;
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -36,22 +39,23 @@ export default function FetchVerifyIfsc() {
 
   /* ================= FETCH ================= */
   const handleFetch = async () => {
+    if (loading) return;
+
     if (!fileNo || !ifsc || !consent) {
       swal.fire("Validation Error", "All fields are required", "warning");
       return;
     }
 
     if (wallet < credits) {
-      swal.fire("Insufficient Credits", "Not enough credits", "error");
+      swal.fire("Insufficient Credits", "Not enough wallet balance", "error");
       return;
     }
 
     const confirm = await swal.fire({
       title: "Confirm IFSC Verification",
       html: `
-        <p><b>File No:</b> ${fileNo}</p>
-        <p><b>Credits Required:</b> ${credits}</p>
-        <p><b>Wallet Balance:</b> ${wallet}</p>
+        <p><b>IFSC:</b> ${ifsc}</p>
+        <p><b>File Number:</b> ${fileNo}</p>
       `,
       icon: "question",
       showCancelButton: true,
@@ -64,39 +68,71 @@ export default function FetchVerifyIfsc() {
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchVerifyIfscController", {
-        usr_ser_id,
-        file_no: fileNo,
+      const checkRes = await api.post("api/checkVerifyIfscCache", {
+        mas_ser_id,
+        mas_cat_id,
         ifsc,
-        consent: "Y",
       });
 
-      const apiData = res.data?.data;
-      const code = apiData?.data?.code;
+      let useCache = false;
 
-      if (code !== "1041") {
-        swal.fire(
-          "Invalid IFSC",
-          apiData?.data?.message || "Invalid IFSC code",
-          "info",
-        );
-        setResult(apiData);
-        return;
+      if (checkRes.data.hasCache) {
+        const fetchedDate = checkRes.data.lastFetchedAt
+          ? new Date(checkRes.data.lastFetchedAt).toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+            })
+          : "Unknown";
+
+        const cacheConfirm = await swal.fire({
+          title: "Previous Data Found",
+          html: `Last fetched on: <b>${fetchedDate}</b>`,
+          icon: "question",
+          showConfirmButton: true,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Use Old Data",
+          denyButtonText: "Fetch Fresh (Deduct Credits)",
+          cancelButtonText: "Cancel",
+            customClass: {
+            confirmButton: "btn-use-old",
+            denyButton: "btn-fetch-fresh",
+          },
+            allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+
+        if (cacheConfirm.isConfirmed) useCache = true;
+        else if (cacheConfirm.isDenied) useCache = false;
+        else {
+          setLoading(false);
+          return;
+        }
       }
 
+      const executeRes = await api.post("api/executeVerifyIfsc", {
+        usr_ser_id,
+        mas_cat_id,
+        mas_ser_id,
+        file_no: fileNo,
+        ifsc,
+        use_cache: useCache,
+      });
+
+      const apiData = executeRes.data?.data;
+      const code = apiData?.data?.code;
+
       setResult(apiData);
-
-      swal.fire(
-        "Success",
-        `
-        IFSC verified successfully<br/>
-        Credits Deducted: <b>${credits}</b><br/>
-        Remaining Wallet: <b>${wallet - credits}</b>
-        `,
-        "success",
-      );
-
       fetchWallet();
+
+      if (code === "1041") {
+        swal.fire("Success", "IFSC Verified Successfully", "success");
+      } else {
+        swal.fire(
+          "Invalid IFSC",
+          apiData?.data?.message || "Verification failed",
+          "warning",
+        );
+      }
     } catch {
       swal.fire("Error", "Server error", "error");
     } finally {
@@ -105,72 +141,141 @@ export default function FetchVerifyIfsc() {
   };
 
   /* ================= PDF EXPORT ================= */
+  // const exportPdf = () => {
+  //   const bank = result?.data?.bank_ifsc_data;
+  //   if (!bank) return;
+
+  //   const doc = {
+  //     content: [
+  //       { text: "IFSC Verification Report", style: "header" },
+
+  //       {
+  //         table: {
+  //           widths: ["40%", "60%"],
+  //           body: [
+  //             ["Service Name", service_name],
+  //             ["File Number", fileNo],
+  //             ["Credits Used", credits],
+  //           ],
+  //         },
+  //         layout: "lightHorizontalLines",
+  //         margin: [0, 10],
+  //       },
+
+  //       { text: "IFSC Details", style: "sub" },
+
+  //       {
+  //         table: {
+  //           widths: ["40%", "60%"],
+  //           body: [
+  //             ["IFSC Code", val(bank.ifsc_code)],
+  //             ["Bank Name", val(bank.bank_name)],
+  //             ["Branch", val(bank.branch_name)],
+  //             ["Address", val(bank.address)],
+  //             ["City", val(bank.city)],
+  //             ["State", val(bank.state)],
+  //             ["MICR Code", val(bank.micr_code)],
+  //             ["NEFT", val(bank.payment_channels?.neft)],
+  //             ["IMPS", val(bank.payment_channels?.imps)],
+  //             ["RTGS", val(bank.payment_channels?.rtgs)],
+  //             ["UPI", val(bank.payment_channels?.upi)],
+  //           ],
+  //         },
+  //         layout: "lightHorizontalLines",
+  //         margin: [0, 10],
+  //       },
+
+  //       { text: "Full API Response", style: "sub", margin: [0, 10] },
+  //       { text: JSON.stringify(result, null, 2), fontSize: 8 },
+  //     ],
+  //     styles: {
+  //       header: { fontSize: 18, bold: true },
+  //       sub: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
+  //     },
+  //   };
+
+  //   pdfMake.createPdf(doc).download(`IFSC_Verification_${fileNo}.pdf`);
+  // };
+
   const exportPdf = () => {
-    const bank = result?.data?.bank_ifsc_data;
-    if (!bank) {
-      swal.fire("No Data", "Nothing to export", "warning");
-      return;
-    }
+    if (!result) return;
+
+    const bank = result?.data?.bank_ifsc_data || {};
+    const requestId = result?.request_id || "-";
+    const transactionId = result?.transaction_id || "-";
 
     const doc = {
       content: [
-        { text: "IFSC Verification Report", style: "header" },
+        {
+          text: "IFSC Verification Report",
+          style: "header",
+        },
+
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
+
+        // ✅ QR Code
+        {
+          qr: requestId !== "-" ? requestId : "IFSC-VERIFICATION",
+          fit: 100,
+          alignment: "right",
+          margin: [0, 10],
+        },
+
+        { text: "IFSC Details", style: "sub" },
 
         {
           table: {
-            widths: ["35%", "65%"],
+            widths: ["40%", "60%"],
             body: [
-              ["Service Name", service_name],
-              ["File Number", fileNo],
-              ["Credits Used", credits],
-            ],
-          },
-          layout: "lightHorizontalLines",
-          marginBottom: 10,
-        },
-
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["IFSC Code", val(bank.ifsc_code)],
-              ["Bank Name", val(bank.bank_name)],
-              ["Branch", val(bank.branch_name)],
-              ["Address", val(bank.address)],
-              ["City", val(bank.city)],
-              ["State", val(bank.state)],
-              ["MICR Code", val(bank.micr_code)],
-              ["NEFT", val(bank.payment_channels?.neft)],
-              ["IMPS", val(bank.payment_channels?.imps)],
-              ["RTGS", val(bank.payment_channels?.rtgs)],
-              ["UPI", val(bank.payment_channels?.upi)],
+              ["IFSC Code", bank.ifsc_code || "-"],
+              ["Bank Name", bank.bank_name || "-"],
+              ["Branch", bank.branch_name || "-"],
+              ["Address", bank.address || "-"],
+              ["City", bank.city || "-"],
+              ["State", bank.state || "-"],
+              ["MICR Code", bank.micr_code || "-"],
+              ["NEFT", bank.payment_channels?.neft || "-"],
+              ["IMPS", bank.payment_channels?.imps || "-"],
+              ["RTGS", bank.payment_channels?.rtgs || "-"],
+              ["UPI", bank.payment_channels?.upi || "-"],
             ],
           },
           layout: "lightHorizontalLines",
         },
 
+        { text: "Full API Response", style: "sub", margin: [0, 10] },
         {
-          text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
-          fontSize: 9,
-          italics: true,
+          text: JSON.stringify(result, null, 2),
+          fontSize: 8,
         },
       ],
+
       styles: {
-        header: { fontSize: 18, bold: true, marginBottom: 10 },
+        header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10],
+        },
+        sub: {
+          fontSize: 14,
+          bold: true,
+          margin: [0, 10, 0, 5],
+        },
       },
     };
 
     pdfMake.createPdf(doc).download(`IFSC_Verification_${fileNo}.pdf`);
   };
 
+  const code = result?.data?.code;
+  const badgeVariant = code === "1041" ? "success" : "warning";
   const bank = result?.data?.bank_ifsc_data;
 
   /* ================= UI ================= */
   return (
     <Row>
       <Col md={12}>
-        {/* HEADER */}
         <Card body className="mb-3">
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name}</h4>
@@ -179,13 +284,6 @@ export default function FetchVerifyIfsc() {
           </p>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
-        {/* FORM */}
         <Card body className="mb-4">
           <Row>
             <Col md={6}>
@@ -221,44 +319,21 @@ export default function FetchVerifyIfsc() {
           </Button>
         </Card>
 
-        {/* RESULT */}
-        {bank && (
+        {result && (
           <Card body>
             <div className="d-flex justify-content-between align-items-center">
-              <h5>IFSC Details</h5>
-              <Button variant="outline-primary" onClick={exportPdf}>
-                Export PDF
-              </Button>
+              <h5>
+                Result <Badge bg={badgeVariant}>{code}</Badge>
+              </h5>
+              {bank && (
+                <Button variant="outline-primary" onClick={exportPdf}>
+                  Export PDF
+                </Button>
+              )}
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                <tr>
-                  <th>Bank</th>
-                  <td>{val(bank.bank_name)}</td>
-                </tr>
-                <tr>
-                  <th>Branch</th>
-                  <td>{val(bank.branch_name)}</td>
-                </tr>
-                <tr>
-                  <th>IFSC</th>
-                  <td>{val(bank.ifsc_code)}</td>
-                </tr>
-                <tr>
-                  <th>City</th>
-                  <td>{val(bank.city)}</td>
-                </tr>
-                <tr>
-                  <th>State</th>
-                  <td>{val(bank.state)}</td>
-                </tr>
-                <tr>
-                  <th>Address</th>
-                  <td>{val(bank.address)}</td>
-                </tr>
-              </tbody>
-            </Table>
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

@@ -14,13 +14,18 @@ import {
   Table,
   ButtonGroup,
 } from "react-bootstrap";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "./../services/api.js";
 
+
 export default function UserCategoryServices() {
   const navigate = useNavigate();
-  const { mas_cat_id } = useParams();
+  // const { mas_cat_id } = useParams();
+    const { state } = useLocation();
+    const { mas_cat_id, mas_ser_id, usr_ser_id, service_name, credits } =
+      state || {};
+
 
   const [wallet, setWallet] = useState(0);
   const [category, setCategory] = useState(null);
@@ -341,11 +346,11 @@ export default function UserCategoryServices() {
               </Table>
             </Tab>
 
-            <Tab eventKey="json" title="JSON">
+            {/* <Tab eventKey="json" title="JSON">
               <pre className="bg-light p-3 mt-3">
                 {JSON.stringify(sampleData, null, 2)}
               </pre>
-            </Tab>
+            </Tab> */}
           </Tabs>
         </Modal.Body>
 

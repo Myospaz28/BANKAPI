@@ -1,5 +1,5 @@
 import express from "express";
-import {  getActiveMasterServicesByCategory , getAllUserRoles , getUsersController , getUserServicesByUserId , getAvailableMasterServicesByCategoryForUser , addUserServicesBulk , deactivateUserService , updateUserServiceCredits ,addUserWalletAmount , getUserWallet , getUserActiveCategories ,getLoggedInUserWallet , getUserActiveServicesByCategory , fetchRcDetailedController , fetchRcLookupByMobileController , fetchRcLiteController , fetchRcContactController , getUserWalletCreditHistory , getUserWalletStatementController , fetchVehicleRegByChassisController , fetchFastagDetailedController , fetchRcEchallanController , fetchRcDetailedByChassisController , getUserSessionTimesController , getLoggedInUserController , getUserAccessDetailsController} from "../controllers/services.controller.js";
+import {  getActiveMasterServicesByCategory , getAllUserRoles , getUsersController , getUserServicesByUserId , getAvailableMasterServicesByCategoryForUser , addUserServicesBulk , deactivateUserService , updateUserServiceCredits ,addUserWalletAmount , getUserWallet , getUserActiveCategories ,getLoggedInUserWallet , getUserActiveServicesByCategory , fetchRcDetailedController , fetchRcLookupByMobileController , fetchRcLiteController , fetchRcContactController , getUserWalletCreditHistory , getUserWalletStatementController , fetchVehicleRegByChassisController , fetchFastagDetailedController , fetchRcEchallanController , fetchRcDetailedByChassisController , getUserSessionTimesController , getLoggedInUserController , getUserAccessDetailsController, checkRcLiteCacheController, executeRcLiteController, checkRcContactCacheController, executeRcContactController, checkRcLookupByMobileCacheController, executeRcLookupByMobileController, checkRcDetailedCacheController, executeRcDetailedController, checkRcEchallanCacheController, executeRcEchallanController, checkFastagDetailedCacheController, executeFastagDetailedController, checkVehicleRegByChassisCacheController, executeVehicleRegByChassisController, updateUserWalletAmount, getUserByIdController, toggleUserStatus, toggleGeoFencingStatus, getAllUsersWalletStatementController} from "../controllers/services.controller.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
 import { accessWindowMiddleware } from "../middleware/checkAccessWindow.middleware.js";
 
@@ -9,6 +9,9 @@ const router = express.Router();
 router.get("/getActiveMasterServicesByCategory", getActiveMasterServicesByCategory);
 router.get("/getAllUserRoles", getAllUserRoles);
 router.get("/getUsersController",verifyToken, getUsersController);
+router.get("/getUserById/:id",verifyToken, getUserByIdController);
+router.put("/toggleUserStatus",verifyToken, toggleUserStatus);
+router.put("/toggleGeoFencingStatus",verifyToken, toggleGeoFencingStatus);
 // router.get("/getUserServicesByUserId/:userId", getUserServicesByUserId);
 router.get("/getUserServicesByUserId/:userId", getUserServicesByUserId);
 router.get("/getAvailableMasterServicesByCategoryForUser/:userId", getAvailableMasterServicesByCategoryForUser);
@@ -26,6 +29,7 @@ router.post("/fetchRcLiteController", verifyToken, fetchRcLiteController);
 router.post("/fetchRcContactController", verifyToken, fetchRcContactController);
 router.get("/getUserWalletCreditHistory/:userId", verifyToken, getUserWalletCreditHistory);
 router.get("/getUserWalletStatement/:userId", verifyToken, getUserWalletStatementController);
+router.get("/getAllUsersWalletStatement", verifyToken, getAllUsersWalletStatementController);
 router.post("/fetchVehicleRegByChassisController", verifyToken, fetchVehicleRegByChassisController);
 router.post("/fetchFastagDetailedController", verifyToken, fetchFastagDetailedController);
 router.post("/fetchRcEchallanController", verifyToken, fetchRcEchallanController);
@@ -33,6 +37,21 @@ router.post("/fetchRcDetailedByChassisController", verifyToken, fetchRcDetailedB
 router.post("/getUserSessionTimesController", verifyToken, getUserSessionTimesController);
 router.get("/getLoggedInUserController", verifyToken, getLoggedInUserController);
 router.get("/getUserAccessDetailsController", verifyToken, getUserAccessDetailsController);
+router.post("/checkRcLiteCache", verifyToken, checkRcLiteCacheController);
+router.post("/executeRcLite", verifyToken, executeRcLiteController);
+router.post("/checkRcContactCache", verifyToken, checkRcContactCacheController);
+router.post("/executeRcContact", verifyToken, executeRcContactController);
+router.post("/checkRcLookupByMobileCache", verifyToken, checkRcLookupByMobileCacheController);
+router.post("/executeRcLookupByMobile", verifyToken, executeRcLookupByMobileController);
+router.post("/checkRcDetailedCache", verifyToken, checkRcDetailedCacheController);
+router.post("/executeRcDetailed", verifyToken, executeRcDetailedController);
+router.post("/checkRcEchallanCache", verifyToken, checkRcEchallanCacheController);
+router.post("/executeRcEchallan", verifyToken, executeRcEchallanController);
+router.post("/checkFastagDetailedCache", verifyToken, checkFastagDetailedCacheController);
+router.post("/executeFastagDetailed", verifyToken, executeFastagDetailedController);
+router.post("/checkVehicleRegByChassisCache", verifyToken, checkVehicleRegByChassisCacheController);
+router.post("/executeVehicleRegByChassis", verifyToken, executeVehicleRegByChassisController);
+router.post("/updateUserWalletAmount", verifyToken, updateUserWalletAmount);
 
 
 export default router;

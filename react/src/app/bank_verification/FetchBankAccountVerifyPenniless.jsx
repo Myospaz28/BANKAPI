@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
-
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.vfs;
+import JsonTableViewer from "../components/JsonTableViewer";
 
-const Required = () => <span style={{ color: "red" }}> *</span>;
+pdfMake.vfs = pdfFonts.vfs;
 
 export default function FetchBankAccountVerifyPenniless() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name, credits } = state || {};
+  const { mas_cat_id, mas_ser_id, usr_ser_id, service_name, credits } =
+    state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -23,36 +23,49 @@ export default function FetchBankAccountVerifyPenniless() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  /* ================= INIT ================= */
+  const Required = () => <span style={{ color: "red", marginLeft: 4 }}>*</span>;
+
   useEffect(() => {
     if (!usr_ser_id) navigate(-1);
     fetchWallet();
-  }, [usr_ser_id, navigate]);
+  }, []);
 
   const fetchWallet = async () => {
     const res = await api.get("api/getLoggedInUserWallet");
     setWallet(Number(res.data?.data?.wallet_amount || 0));
   };
 
-  /* ================= SUBMIT ================= */
+  const normalizeResult = (data) => {
+    if (!data) return null;
+    if (typeof data === "string") {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return data;
+      }
+    }
+    return data;
+  };
+
   const handleFetch = async () => {
+    if (loading) return;
+
     if (!fileNo || !accountNumber || !ifsc || !consent) {
       swal.fire("Validation Error", "All fields are required", "warning");
       return;
     }
 
     if (wallet < credits) {
-      swal.fire("Insufficient Credits", "Not enough credits", "error");
+      swal.fire("Insufficient Credits", "Not enough wallet balance", "error");
       return;
     }
 
-    /* ===== CONFIRM ALERT (AADHAAR STYLE) ===== */
     const confirm = await swal.fire({
       title: "Confirm Bank Verification (Penniless)",
       html: `
-        <p><b>File No:</b> ${fileNo}</p>
-        <p><b>Credits Required:</b> ${credits}</p>
-        <p><b>Wallet Balance:</b> ${wallet}</p>
+        <p><b>Account Number:</b> ${accountNumber}</p>
+        <p><b>IFSC:</b> ${ifsc}</p>
+        <p><b>File Number:</b> ${fileNo}</p>
       `,
       icon: "question",
       showCancelButton: true,
@@ -65,44 +78,76 @@ export default function FetchBankAccountVerifyPenniless() {
     setResult(null);
 
     try {
-      const res = await api.post(
-        "api/fetchBankAccountVerifyPennilessController",
+      const checkRes = await api.post(
+        "api/checkBankAccountVerifyPennilessCache",
         {
-          usr_ser_id,
-          file_no: fileNo,
+          mas_ser_id,
+          mas_cat_id,
           account_number: accountNumber,
           ifsc,
-          consent: "Y",
         },
       );
 
-      const apiData = res.data?.data;
-      const code = apiData?.data?.code;
+      let useCache = false;
 
-      if (code !== "1000") {
-        swal.fire(
-          "Verification Failed",
-          apiData?.data?.message || "Unable to verify bank account",
-          "info",
-        );
-        setResult(apiData);
-        return;
+      if (checkRes.data.hasCache) {
+        const fetchedDate = new Date(
+          checkRes.data.lastFetchedAt,
+        ).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+       const cacheConfirm = await swal.fire({
+                title: "Previous Data Found",
+                html: `Last fetched on: <b>${fetchedDate}</b>`,
+                icon: "question",
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: "Use Old Data",
+                denyButtonText: "Fetch Fresh",
+                   customClass: {
+                  confirmButton: "btn-use-old",
+                  denyButton: "btn-fetch-fresh",
+                },
+                  allowOutsideClick: false,
+                allowEscapeKey: false,
+              });
+
+        if (cacheConfirm.isConfirmed) {
+  useCache = true; // Use old data
+} else if (cacheConfirm.isDenied) {
+  useCache = false; // Fetch fresh
+} else {
+  // Cancel clicked → STOP execution
+  setLoading(false);
+  return;
+}
       }
 
-      setResult(apiData);
-
-      /* ===== SUCCESS ALERT (AADHAAR STYLE) ===== */
-      swal.fire(
-        "Success",
-        `
-        Bank account verified successfully (Penniless)<br/>
-        Credits Deducted: <b>${credits}</b><br/>
-        Remaining Wallet: <b>${wallet - credits}</b>
-        `,
-        "success",
+      const executeRes = await api.post(
+        "api/executeBankAccountVerifyPenniless",
+        {
+          usr_ser_id,
+          mas_cat_id,
+          mas_ser_id,
+          file_no: fileNo,
+          account_number: accountNumber,
+          ifsc,
+          use_cache: useCache,
+        },
       );
 
+      const apiData = executeRes.data?.data;
+      const code = apiData?.data?.code;
+
+      setResult(normalizeResult(apiData));
       fetchWallet();
+
+      if (code === "1000") {
+        swal.fire("Success", "Bank Verified Successfully", "success");
+      } else if (code === "1028") {
+        swal.fire("Invalid Account", "Verification failed", "warning");
+      } else {
+        swal.fire("Completed", "Request processed", "info");
+      }
     } catch (err) {
       swal.fire("Error", "Server error", "error");
     } finally {
@@ -110,13 +155,11 @@ export default function FetchBankAccountVerifyPenniless() {
     }
   };
 
-  /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
-    const bank = result?.data?.bank_account_data;
-    if (!bank) {
-      swal.fire("No Data", "Nothing to export", "warning");
-      return;
-    }
+    if (!result) return;
+
+    const bank = result?.data?.bank_account_data || {};
+    const transactionId = result?.transaction_id || "-";
 
     const doc = {
       content: [
@@ -124,60 +167,49 @@ export default function FetchBankAccountVerifyPenniless() {
           text: "Bank Account Verification Report (Penniless)",
           style: "header",
         },
+        { text: `Request ID: ${result?.request_id}` },
+        { text: `Transaction ID: ${transactionId}` },
+        { qr: transactionId, fit: 100, alignment: "right" },
 
+        { text: "Bank Details", style: "sub" },
         {
           table: {
-            widths: ["35%", "65%"],
+            widths: ["40%", "60%"],
             body: [
-              ["Service Name", service_name],
-              ["File Number", fileNo],
-              ["Credits Used", credits],
+              ["Name", bank.name || "-"],
+              ["Bank", bank.bank_name || "-"],
+              ["Branch", bank.branch || "-"],
+              ["Account", bank.account_number || "-"],
+              ["IFSC", bank.ifsc || "-"],
+              ["Status", bank.account_status || "-"],
+              ["Method", "Penniless"],
             ],
           },
-          layout: "lightHorizontalLines",
-          marginBottom: 10,
         },
 
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["Account Holder Name", bank.name],
-              ["Bank Name", bank.bank_name],
-              ["Branch", bank.branch],
-              ["Account Number", bank.account_number],
-              ["IFSC", bank.ifsc],
-              ["Account Status", bank.account_status],
-              ["Verification Method", "Penniless"],
-            ],
-          },
-          layout: "lightHorizontalLines",
-        },
-
-        {
-          text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
-          fontSize: 9,
-          italics: true,
-        },
+        { text: "Full API Response", style: "sub", margin: [0, 10] },
+        { text: JSON.stringify(result, null, 2), fontSize: 8 },
       ],
       styles: {
-        header: { fontSize: 18, bold: true, marginBottom: 10 },
+        header: { fontSize: 18, bold: true },
+        sub: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
       },
     };
 
-    pdfMake
-      .createPdf(doc)
-      .download(`Bank_Verification_Penniless_${fileNo}.pdf`);
+    pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
   };
 
-  const bank = result?.data?.bank_account_data;
+  const code = result?.data?.code;
 
-  /* ================= UI ================= */
+  const getBadgeVariant = () => {
+    if (code === "1000") return "success";
+    if (code === "1028") return "danger";
+    return "warning";
+  };
+
   return (
     <Row>
       <Col md={12}>
-        {/* HEADER */}
         <Card body className="mb-3">
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name}</h4>
@@ -186,16 +218,9 @@ export default function FetchBankAccountVerifyPenniless() {
           </p>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
-        {/* FORM */}
         <Card body className="mb-4">
           <Row>
-            <Col md={6}>
+            <Col md={4}>
               <Form.Label>
                 File Number <Required />
               </Form.Label>
@@ -205,7 +230,7 @@ export default function FetchBankAccountVerifyPenniless() {
               />
             </Col>
 
-            <Col md={6}>
+            <Col md={4}>
               <Form.Label>
                 Account Number <Required />
               </Form.Label>
@@ -214,10 +239,8 @@ export default function FetchBankAccountVerifyPenniless() {
                 onChange={(e) => setAccountNumber(e.target.value)}
               />
             </Col>
-          </Row>
 
-          <Row className="mt-2">
-            <Col md={6}>
+            <Col md={4}>
               <Form.Label>
                 IFSC <Required />
               </Form.Label>
@@ -236,48 +259,21 @@ export default function FetchBankAccountVerifyPenniless() {
           />
 
           <Button className="mt-3" onClick={handleFetch} disabled={loading}>
-            {loading ? <Spinner size="sm" /> : "Verify Bank Account"}
+            {loading ? <Spinner size="sm" /> : "Verify"}
           </Button>
         </Card>
 
-        {/* RESULT */}
-        {bank && (
+        {result && (
           <Card body>
             <div className="d-flex justify-content-between align-items-center">
-              <h5>Bank Account Details</h5>
-              <Button variant="outline-primary" onClick={exportPdf}>
-                Export PDF
-              </Button>
+              <h5>
+                Result <Badge bg={getBadgeVariant()}>{code}</Badge>
+              </h5>
+              <Button onClick={exportPdf}>Export PDF</Button>
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                <tr>
-                  <th>Name</th>
-                  <td>{bank.name}</td>
-                </tr>
-                <tr>
-                  <th>Bank</th>
-                  <td>{bank.bank_name}</td>
-                </tr>
-                <tr>
-                  <th>Branch</th>
-                  <td>{bank.branch}</td>
-                </tr>
-                <tr>
-                  <th>Account</th>
-                  <td>{bank.account_number}</td>
-                </tr>
-                <tr>
-                  <th>IFSC</th>
-                  <td>{bank.ifsc}</td>
-                </tr>
-                <tr>
-                  <th>Status</th>
-                  <td>{bank.account_status}</td>
-                </tr>
-              </tbody>
-            </Table>
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

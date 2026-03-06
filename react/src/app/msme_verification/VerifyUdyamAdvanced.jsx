@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
+import JsonTableViewer from "../components/JsonTableViewer";
 
-/* ===== PDF ===== */
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 pdfMake.vfs = pdfFonts.vfs;
@@ -14,7 +14,8 @@ const Required = () => <span style={{ color: "red" }}> *</span>;
 export default function VerifyUdyamAdvanced() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name, credits } = state || {};
+  const { usr_ser_id, service_name, credits, mas_ser_id, mas_cat_id } =
+    state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -41,54 +42,62 @@ export default function VerifyUdyamAdvanced() {
       return;
     }
 
-    const confirm = await swal.fire({
-      title: "Confirm Verification",
-      html: `<b>Udyam:</b> ${udyamNo}<br/><b>Credits:</b> ${credits}`,
-      showCancelButton: true,
-      confirmButtonText: "Proceed",
-    });
-
-    if (!confirm.isConfirmed) return;
-
     setLoading(true);
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchVerifyUdyamAdvancedController", {
-        usr_ser_id,
-        file_no: fileNo,
+      const checkRes = await api.post("api/checkVerifyUdyamAdvancedCache", {
+        mas_ser_id,
+        mas_cat_id,
         udyam_reference_number: udyamNo,
-        consent: "Y",
       });
 
-      const apiData = res.data?.data?.data;
-      const code = apiData?.code;
+      let useCache = false;
 
-      if (code !== "1000") {
-        swal.fire("Info", apiData?.message, "info");
-        setResult(apiData);
-        return;
+      if (checkRes.data.hasCache) {
+        const confirm = await swal.fire({
+          title: "Use Cached Data?",
+          showCancelButton: true,
+        });
+
+        if (confirm.isConfirmed) useCache = true;
       }
 
-      setResult(apiData);
-      swal.fire("Success", "Udyam verified successfully", "success");
+      const res = await api.post("api/executeVerifyUdyamAdvanced", {
+        usr_ser_id,
+        mas_ser_id,
+        mas_cat_id,
+        file_no: fileNo,
+        udyam_reference_number: udyamNo,
+        use_cache: useCache,
+      });
+
+      const fullResponse = res.data?.data;
+      setResult(fullResponse);
+
+      swal.fire("Completed", "Verification processed", "success");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
     if (!result) return;
 
-    const rows = Object.entries(result.enterprise_data || {}).map(([k, v]) => [
+    const requestId = result?.request_id;
+    const transactionId = result?.transaction_id;
+
+    const rows = Object.entries(result?.data || {}).map(([k, v]) => [
       k,
       typeof v === "object" ? JSON.stringify(v) : v,
     ]);
 
     const doc = {
       content: [
-        { text: "Udyam Advanced Verification Report", style: "header" },
+        { text: "Udyam Advanced Verification", style: "header" },
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
+        { qr: requestId, fit: 80, alignment: "right" },
         {
           table: {
             widths: ["40%", "60%"],
@@ -107,20 +116,13 @@ export default function VerifyUdyamAdvanced() {
   return (
     <Row>
       <Col md={12}>
-        <Card body className="mb-3">
-          <Button onClick={() => navigate(-1)}>← Back</Button>
-          <h4 className="mt-3">{service_name || "Verify Udyam Advanced"}</h4>
-          <p>
-            Credits Required: <b>{credits}</b>
-          </p>
-        </Card>
-
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
         <Card body>
+          <Button onClick={() => navigate(-1)}>← Back</Button>
+          <h4 className="mt-3">{service_name}</h4>
+          <p>Credits Required: {credits}</p>
+        </Card>
+
+        <Card body className="mt-3">
           <Form.Group>
             <Form.Label>
               File Number <Required />
@@ -153,35 +155,14 @@ export default function VerifyUdyamAdvanced() {
           </Button>
         </Card>
 
-        {result?.enterprise_data && (
+        {result && (
           <Card body className="mt-3">
             <div className="d-flex justify-content-between">
-              <h5>Enterprise Details</h5>
-              <div>
-                <Button variant="outline-primary" onClick={exportPdf}>
-                  Export PDF
-                </Button>{" "}
-                <a
-                  href={result.udyam_certificate_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-outline-success"
-                >
-                  Download Certificate
-                </a>
-              </div>
+              <h5>Result</h5>
+              <Button onClick={exportPdf}>Export PDF</Button>
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                {Object.entries(result.enterprise_data).map(([k, v]) => (
-                  <tr key={k}>
-                    <th>{k}</th>
-                    <td>{typeof v === "object" ? JSON.stringify(v) : v}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

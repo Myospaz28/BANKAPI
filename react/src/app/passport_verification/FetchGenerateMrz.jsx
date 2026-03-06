@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
+import JsonTableViewer from "../components/JsonTableViewer";
 
 /* ===== PDF ===== */
 import pdfMake from "pdfmake/build/pdfmake";
@@ -14,7 +15,8 @@ const Required = () => <span style={{ color: "red" }}> *</span>;
 export default function FetchGenerateMrz() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name, credits } = state || {};
+  const { usr_ser_id, service_name, credits, mas_ser_id, mas_cat_id } =
+    state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -27,6 +29,7 @@ export default function FetchGenerateMrz() {
     date_of_birth: "",
     date_of_expiry: "",
   });
+
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -34,13 +37,11 @@ export default function FetchGenerateMrz() {
   /* ================= INIT ================= */
   useEffect(() => {
     if (!usr_ser_id) navigate(-1);
-  }, [usr_ser_id, navigate]);
 
-  useEffect(() => {
     api
       .get("api/getLoggedInUserWallet")
       .then((res) => setWallet(Number(res.data?.data?.wallet_amount || 0)));
-  }, []);
+  }, [usr_ser_id, navigate]);
 
   /* ================= HANDLE CHANGE ================= */
   const handleChange = (e) => {
@@ -70,7 +71,7 @@ export default function FetchGenerateMrz() {
       !date_of_expiry ||
       !consent
     ) {
-      swal.fire("Validation Error", "All fields are required", "warning");
+      swal.fire("Validation Error", "All required fields missing", "warning");
       return;
     }
 
@@ -79,145 +80,137 @@ export default function FetchGenerateMrz() {
       return;
     }
 
-    const confirm = await swal.fire({
-      title: "Confirm MRZ Generation",
-      html: `
-        <p><b>Credits Required:</b> ${credits}</p>
-        <p><b>File No:</b> ${fileNo}</p>
-      `,
-      icon: "question",
-      showCancelButton: true,
-    });
-
-    if (!confirm.isConfirmed) return;
-
     setLoading(true);
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchGenerateMrzController", {
-        usr_ser_id,
-        file_no: fileNo,
-        ...form,
-        consent: "Y",
+      /* ===== CACHE CHECK ===== */
+      const checkRes = await api.post("api/checkGenerateMrzCache", {
+        mas_ser_id,
+        mas_cat_id,
+        passport_number: form.passport_number,
       });
 
-      const apiData = res.data?.data;
-      const code = apiData?.data?.code;
+      let useCache = false;
+
+      if (checkRes.data.hasCache) {
+        const fetchedDate = new Date(
+          checkRes.data.lastFetchedAt,
+        ).toLocaleString("en-IN");
+
+        const cacheConfirm = await swal.fire({
+          title: "Previous Data Found",
+          html: `Last fetched on: <b>${fetchedDate}</b>`,
+          showConfirmButton: true,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Use Old Data",
+          denyButtonText: "Fetch Fresh",
+               customClass: {
+            confirmButton: "btn-use-old",
+            denyButton: "btn-fetch-fresh",
+          },
+            allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+
+        if (cacheConfirm.isConfirmed) useCache = true;
+        else if (!cacheConfirm.isDenied) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      /* ===== EXECUTE API ===== */
+      const res = await api.post("api/executeGenerateMrz", {
+        usr_ser_id,
+        mas_ser_id,
+        mas_cat_id,
+        file_no: fileNo,
+        ...form,
+        use_cache: useCache,
+      });
+
+      const fullResponse = res.data?.data;
+      setResult(fullResponse);
+
+      /* wallet refresh */
+      if (res.data?.wallet?.closing_balance !== undefined) {
+        setWallet(res.data.wallet.closing_balance);
+      }
+
+      const code = fullResponse?.data?.code;
 
       if (code !== "1000") {
         swal.fire(
           "Failed",
-          apiData?.data?.message || "Unable to generate MRZ",
+          fullResponse?.data?.message || "MRZ generation failed",
           "error",
         );
-        return;
+      } else {
+        swal.fire("Success", "MRZ generated successfully", "success");
       }
-
-      setResult(apiData);
-      swal.fire("Success", "MRZ generated successfully", "success");
-    } catch {
-      swal.fire("Error", "Server error", "error");
+    } catch (err) {
+      swal.fire(
+        "Error",
+        err?.response?.data?.message || "Server error",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const code = result?.data?.code;
+  const badgeVariant = code === "1000" ? "success" : "secondary";
+
   /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
-    const mrz = result?.data?.mrz_data;
-    if (!mrz) {
-      swal.fire("No Data", "Nothing to export", "warning");
-      return;
-    }
+    if (!result) return;
 
-    const doc = {
+    const requestId = result?.request_id || "-";
+    const transactionId = result?.transaction_id || "-";
+    const mrz = result?.data?.mrz_data;
+
+    const docDefinition = {
       content: [
         { text: "Passport MRZ Generation Report", style: "header" },
-
-        { text: "Service Details", style: "sub" },
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
         {
           table: {
-            widths: ["35%", "65%"],
+            widths: ["40%", "60%"],
             body: [
-              ["Service Name", service_name],
               ["File Number", fileNo],
-              ["Credits Used", credits],
-            ],
-          },
-          layout: "lightHorizontalLines",
-          marginBottom: 10,
-        },
-
-        { text: "Passport Details", style: "sub" },
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["Country Code", form.country_code],
               ["Passport Number", form.passport_number],
-              ["Surname", form.surname],
-              ["Given Name", form.given_name],
-              ["Gender", form.gender],
-              ["Date of Birth", form.date_of_birth],
-              ["Date of Expiry", form.date_of_expiry],
+              ["MRZ Line 1", mrz?.first_line],
+              ["MRZ Line 2", mrz?.second_line],
             ],
           },
           layout: "lightHorizontalLines",
-          marginBottom: 10,
-        },
-
-        { text: "Generated MRZ", style: "sub" },
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["MRZ Line 1", mrz.first_line],
-              ["MRZ Line 2", mrz.second_line],
-            ],
-          },
-          layout: "lightHorizontalLines",
-        },
-
-        {
-          text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
-          fontSize: 9,
-          italics: true,
         },
       ],
       styles: {
         header: { fontSize: 18, bold: true, marginBottom: 10 },
-        sub: { fontSize: 14, bold: true, marginTop: 10, marginBottom: 5 },
       },
     };
 
-    pdfMake.createPdf(doc).download(`MRZ_${fileNo}.pdf`);
+    pdfMake.createPdf(docDefinition).download(`MRZ_${fileNo}.pdf`);
   };
-
-  const mrz = result?.data?.mrz_data;
 
   /* ================= UI ================= */
   return (
     <Row>
       <Col md={12}>
-        {/* HEADER */}
-        <Card body className="mb-3">
+        <Card body>
           <Button onClick={() => navigate(-1)}>← Back</Button>
-          <h4 className="mt-3">{service_name}</h4>
+          <h4 className="mt-3">{service_name || "Generate Passport MRZ"}</h4>
           <p>
             Credits Required: <b>{credits}</b>
           </p>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
-        {/* FORM */}
-        <Card body className="mb-4">
+        <Card body className="mt-3">
           <Row>
             <Col md={4}>
               <Form.Label>
@@ -324,28 +317,24 @@ export default function FetchGenerateMrz() {
           </Button>
         </Card>
 
-        {/* RESULT */}
-        {mrz && (
-          <Card body>
+        {result && (
+          <Card body className="mt-4">
             <div className="d-flex justify-content-between align-items-center">
-              <h5>Generated MRZ</h5>
+              <h5>
+                Result <Badge bg={badgeVariant}>{code}</Badge>
+              </h5>
               <Button variant="outline-primary" onClick={exportPdf}>
                 Export PDF
               </Button>
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                <tr>
-                  <th>MRZ Line 1</th>
-                  <td>{mrz.first_line}</td>
-                </tr>
-                <tr>
-                  <th>MRZ Line 2</th>
-                  <td>{mrz.second_line}</td>
-                </tr>
-              </tbody>
-            </Table>
+            <p className="mt-2">
+              <b>Request ID:</b> {result?.request_id} <br />
+              <b>Transaction ID:</b> {result?.transaction_id}
+            </p>
+
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

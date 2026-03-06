@@ -12,20 +12,55 @@
   }
 }
 
+// .swal2-container {
+//   .swal2-modal {
+//     font-family: $font-family-base;
+//   }
+//   .swal2-spacer {
+//     margin: 1.5rem 0;
+//   }
+//   .swal2-styled:not(.swal2-cancel) {
+//     background: $primary !important;
+//     outline: none;
+//     &:focus {
+//       box-shadow: 0 0 0 0.2rem rgba($primary, 0.5);
+//     }
+//   }
+// }
+
 .swal2-container {
+
   .swal2-modal {
     font-family: $font-family-base;
   }
+
   .swal2-spacer {
     margin: 1.5rem 0;
   }
-  .swal2-styled:not(.swal2-cancel) {
+
+  // 🔵 Default primary for all except use-old
+  .swal2-styled:not(.swal2-cancel):not(.btn-use-old) {
     background: $primary !important;
     outline: none;
+
     &:focus {
       box-shadow: 0 0 0 0.2rem rgba($primary, 0.5);
     }
   }
+
+  // 🟢 Only Use Old button
+  .btn-use-old {
+    background: #679c42 !important;
+
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(103, 156, 66, 0.5) !important;
+    }
+
+    &:hover {
+      background: darken(#679c42, 7%) !important;
+    }
+  }
+
 }
 
 .notification-container {

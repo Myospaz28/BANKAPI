@@ -16,6 +16,9 @@ import msmeverificatinRoutes from "./routes/msmeverification.routes.js";
 import aadharverificationRoutes from "./routes/aadharverification.routes.js";
 import facematchverificationRoutes from "./routes/facematchvarification.routes.js";
 import ccrvRoutes from "./routes/ccrv.routes.js"
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import { locationGuard } from "./middleware/locationGuard.middleware.js";
+import { verifyToken } from "./middleware/auth.middleware.js";
 
 dotenv.config();
 
@@ -39,6 +42,8 @@ app.use("/api", msmeverificatinRoutes);
 app.use("/api", aadharverificationRoutes);
 app.use("/api", facematchverificationRoutes);
 app.use("/api", ccrvRoutes);
+app.use("/api", dashboardRoutes);
+app.use("/api", verifyToken, locationGuard);
 
 app.get("/", (req, res) => {
   res.send("Backend running...");

@@ -1,4 +1,5 @@
 import moment from "moment";
+import CryptoJS from "crypto-js";
 
 export function isMobile() {
   return window ? window.matchMedia(`(max-width: 767px)`).matches : false;
@@ -132,6 +133,14 @@ export const generateLastDays = (length = 7) => {
     .map((i) => moment().subtract(i, "days").format("D MMM YY"));
 };
 
+/**
+ * Check whether current time is within allowed service window
+ * @param {string|null} login_time  - HH:mm:ss
+ * @param {string|null} logout_time - HH:mm:ss
+ * @returns {boolean}
+ */
+
+
 
 /**
  * Check whether current time is within allowed service window
@@ -153,3 +162,7 @@ export function isServiceAccessAllowed(login_time, logout_time) {
   // Overnight window (e.g. 22:00 → 06:00)
   return current >= login_time || current <= logout_time;
 }
+
+
+
+

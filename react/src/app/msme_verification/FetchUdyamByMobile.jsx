@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
+import JsonTableViewer from "../components/JsonTableViewer";
 
 /* ================= PDF ================= */
 import pdfMake from "pdfmake/build/pdfmake";
@@ -14,7 +15,7 @@ const Required = () => <span style={{ color: "red" }}> *</span>;
 export default function FetchUdyamByMobile() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name } = state || {};
+  const { usr_ser_id, service_name, mas_ser_id, mas_cat_id } = state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -34,16 +35,19 @@ export default function FetchUdyamByMobile() {
 
   /* ================= FETCH ================= */
   const handleFetch = async () => {
-    if (!mobile || !fileNo || !consent) {
+    if (!mobile || mobile.length !== 10 || !fileNo || !consent) {
       swal.fire("Validation Error", "All fields are required", "warning");
       return;
     }
 
     const confirm = await swal.fire({
-      title: "Confirm Fetch",
-      html: `<b>Mobile:</b> ${mobile}<br/><b>File No:</b> ${fileNo}`,
+      title: "Confirm Udyam Fetch",
+      html: `
+        <p><b>Mobile:</b> ${mobile}</p>
+        <p><b>File Number:</b> ${fileNo}</p>
+      `,
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Proceed",
     });
 
     if (!confirm.isConfirmed) return;
@@ -52,32 +56,78 @@ export default function FetchUdyamByMobile() {
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchUdyamByMobileController", {
-        usr_ser_id,
-        file_no: fileNo,
+      /* ===== CACHE CHECK ===== */
+      const checkRes = await api.post("api/checkUdyamMobileCache", {
+        mas_ser_id,
+        mas_cat_id,
         mobile_number: mobile,
-        consent: "Y",
       });
 
-      const apiData = res.data?.data?.data;
-      const code = apiData?.code;
+      let useCache = false;
 
-      if (code !== "1010") {
-        swal.fire("Info", apiData?.message || "No record found", "info");
-        setResult(apiData);
-        return;
+      if (checkRes.data.hasCache) {
+        const fetchedDate = new Date(
+          checkRes.data.lastFetchedAt,
+        ).toLocaleString("en-IN");
+
+        const cacheConfirm = await swal.fire({
+          title: "Previous Data Found",
+          html: `Last fetched on: <b>${fetchedDate}</b>`,
+          showConfirmButton: true,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Use Old Data",
+          denyButtonText: "Fetch Fresh",
+               customClass: {
+            confirmButton: "btn-use-old",
+            denyButton: "btn-fetch-fresh",
+          },
+            allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+
+        if (cacheConfirm.isConfirmed) useCache = true;
+        else if (!cacheConfirm.isDenied) {
+          setLoading(false);
+          return;
+        }
       }
 
-      setResult(apiData);
-      swal.fire("Success", "Udyam details fetched", "success");
-    } catch (err) {
-      swal.fire("Error", "Something went wrong", "error");
+      const res = await api.post("api/executeUdyamMobile", {
+        usr_ser_id,
+        mas_ser_id,
+        mas_cat_id,
+        file_no: fileNo,
+        mobile_number: mobile,
+        use_cache: useCache,
+      });
+
+      /* IMPORTANT FIX */
+      const fullResponse = res.data?.data; // 👈 NOT res.data.data.data
+
+      setResult(fullResponse);
+
+      const code = fullResponse?.data?.code;
+
+      if (code !== "1010") {
+        swal.fire(
+          "Info",
+          fullResponse?.data?.message || "No record found",
+          "info",
+        );
+      } else {
+        swal.fire("Success", "Udyam details fetched", "success");
+      }
+    } catch {
+      swal.fire("Error", "Server error", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const udyamList = result?.udyam_details;
+  const udyamList = result?.data?.udyam_details;
+  const code = result?.data?.code;
+  const badgeVariant = code === "1010" ? "success" : "secondary";
 
   /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
@@ -85,6 +135,9 @@ export default function FetchUdyamByMobile() {
       swal.fire("No Data", "Nothing to export", "warning");
       return;
     }
+
+    const requestId = result?.request_id || "UDYAM_REQUEST";
+    const transactionId = result?.transaction_id || "-";
 
     const tableBody = [
       [
@@ -100,8 +153,21 @@ export default function FetchUdyamByMobile() {
     ];
 
     const docDefinition = {
+      pageSize: "A4",
+      pageMargins: [40, 60, 40, 60],
+
       content: [
         { text: "Udyam Fetch Report", style: "header" },
+
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
+
+        {
+          qr: requestId,
+          fit: 90,
+          alignment: "right",
+          margin: [0, 10],
+        },
 
         { text: "Request Details", style: "subHeader" },
         {
@@ -114,7 +180,7 @@ export default function FetchUdyamByMobile() {
             ],
           },
           layout: "lightHorizontalLines",
-          marginBottom: 15,
+          margin: [0, 5],
         },
 
         { text: "Udyam Details", style: "subHeader" },
@@ -124,14 +190,21 @@ export default function FetchUdyamByMobile() {
             body: tableBody,
           },
           layout: "lightHorizontalLines",
+          margin: [0, 5],
+        },
+
+        { text: "Full API Response", style: "subHeader", margin: [0, 15] },
+        {
+          text: JSON.stringify(result, null, 2),
+          fontSize: 7,
         },
 
         {
           text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
+          alignment: "right",
           fontSize: 9,
           italics: true,
-          alignment: "right",
+          margin: [0, 10],
         },
       ],
 
@@ -157,39 +230,35 @@ export default function FetchUdyamByMobile() {
     <Row>
       <Col md={12}>
         {/* HEADER */}
-        <Card body className="mb-3">
+        <Card body>
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name || "Fetch Udyam By Mobile"}</h4>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
         {/* FORM */}
-        <Card body className="mb-4">
-          <Form.Group>
-            <Form.Label>
-              File Number <Required />
-            </Form.Label>
-            <Form.Control
-              value={fileNo}
-              onChange={(e) => setFileNo(e.target.value)}
-            />
-          </Form.Group>
+        <Card body className="mt-3">
+          <Row>
+            <Col md={6}>
+              <Form.Label>
+                File Number <Required />
+              </Form.Label>
+              <Form.Control
+                value={fileNo}
+                onChange={(e) => setFileNo(e.target.value)}
+              />
+            </Col>
 
-          <Form.Group className="mt-2">
-            <Form.Label>
-              Mobile Number <Required />
-            </Form.Label>
-            <Form.Control
-              value={mobile}
-              maxLength={10}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-            />
-          </Form.Group>
+            <Col md={6}>
+              <Form.Label>
+                Mobile Number <Required />
+              </Form.Label>
+              <Form.Control
+                value={mobile}
+                maxLength={10}
+                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+              />
+            </Col>
+          </Row>
 
           <Form.Check
             className="mt-3"
@@ -204,33 +273,22 @@ export default function FetchUdyamByMobile() {
         </Card>
 
         {/* RESULT */}
-        {Array.isArray(udyamList) && (
-          <Card body>
+        {result && (
+          <Card body className="mt-4">
             <div className="d-flex justify-content-between align-items-center">
-              <h5>Udyam Details</h5>
-              <Button variant="outline-primary" onClick={exportPdf}>
-                📄 Export PDF
-              </Button>
+              <h5>
+                Result <Badge bg={badgeVariant}>{code}</Badge>
+              </h5>
+
+              {Array.isArray(udyamList) && (
+                <Button variant="outline-primary" onClick={exportPdf}>
+                  Export PDF
+                </Button>
+              )}
             </div>
 
-            <Table bordered className="mt-3">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Udyam Number</th>
-                  <th>Enterprise Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                {udyamList.map((u, i) => (
-                  <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td>{u.udyam_number}</td>
-                    <td>{u.enterprise_name}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

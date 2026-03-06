@@ -1,3 +1,4 @@
+
 // import { useEffect } from "react";
 // import { useNavigate } from "react-router-dom";
 // import jwtAuthService from "app/services/jwtAuthService";
@@ -6,30 +7,23 @@
 //   const navigate = useNavigate();
 
 //   useEffect(() => {
-//     const authUser = JSON.parse(localStorage.getItem("auth_user"));
-//     if (!authUser) return;
+//     const authUser = localStorage.getItem("auth_user");
+//     const expiryTime = localStorage.getItem("session_expiry");
 
-//     const logSessionTime = authUser.user.log_session_time || "00:15:00";
+//     // Not logged in
+//     if (!authUser || !expiryTime) return;
 
-//     const [hrs, mins, secs] = logSessionTime.split(":").map(Number);
-//     const sessionMs = ((hrs * 60 + mins) * 60 + secs) * 1000;
+//     const remaining = parseInt(expiryTime, 10) - Date.now();
 
-//     let expiryTime = localStorage.getItem("session_expiry");
-//     if (!expiryTime) {
-//       expiryTime = Date.now() + sessionMs;
-//       localStorage.setItem("session_expiry", expiryTime);
-//     } else {
-//       expiryTime = parseInt(expiryTime, 10);
-//     }
-
-//     const remaining = expiryTime - Date.now();
-
+//     // Session already expired
 //     if (remaining <= 0) {
 //       jwtAuthService.logout();
+//       localStorage.removeItem("session_expiry");
 //       navigate("/sessions/signin", { replace: true });
 //       return;
 //     }
 
+//     // Resume logout timer
 //     const timer = setTimeout(() => {
 //       jwtAuthService.logout();
 //       localStorage.removeItem("session_expiry");
@@ -45,6 +39,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import jwtAuthService from "app/services/jwtAuthService";
+import api from "../services/api";
 
 export default function AutoLogoutHandler() {
   const navigate = useNavigate();
@@ -53,7 +48,7 @@ export default function AutoLogoutHandler() {
     const authUser = localStorage.getItem("auth_user");
     const expiryTime = localStorage.getItem("session_expiry");
 
-    // Not logged in
+    
     if (!authUser || !expiryTime) return;
 
     const remaining = parseInt(expiryTime, 10) - Date.now();
@@ -67,11 +62,29 @@ export default function AutoLogoutHandler() {
     }
 
     // Resume logout timer
-    const timer = setTimeout(() => {
-      jwtAuthService.logout();
-      localStorage.removeItem("session_expiry");
-      navigate("/sessions/signin", { replace: true });
-    }, remaining);
+    // const timer = setTimeout(() => {
+    //   jwtAuthService.logout();
+    //   localStorage.removeItem("session_expiry");
+    //   navigate("/sessions/signin", { replace: true });
+    // }, remaining);
+
+
+const timer = setTimeout(async () => {
+  try {
+    await api.post("/auth/logout", {
+      reason: "Session time expired",
+    });
+  } catch (err) {
+    console.log("Backend logout failed");
+  }
+
+  localStorage.setItem("session_expired", "true"); // 👈 ADD
+
+  jwtAuthService.logout();
+  localStorage.removeItem("session_expiry");
+  navigate("/sessions/signin", { replace: true });
+}, remaining);
+
 
     return () => clearTimeout(timer);
   }, [navigate]);

@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
-
-/* ===== PDF ===== */
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.vfs;
+import JsonTableViewer from "../components/JsonTableViewer";
 
-const Required = () => <span style={{ color: "red" }}> *</span>;
-const val = (v) => (v ? v : "-");
+pdfMake.vfs = pdfFonts.vfs;
 
 export default function FetchBankAccountVerify() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name, credits } = state || {};
+  const { usr_ser_id, service_name, credits, mas_ser_id, mas_cat_id } =
+    state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -25,7 +23,8 @@ export default function FetchBankAccountVerify() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  /* ================= INIT ================= */
+  const Required = () => <span style={{ color: "red" }}>*</span>;
+
   useEffect(() => {
     if (!usr_ser_id) navigate(-1);
     fetchWallet();
@@ -38,22 +37,25 @@ export default function FetchBankAccountVerify() {
 
   /* ================= FETCH ================= */
   const handleFetch = async () => {
+    if (loading) return;
+
     if (!fileNo || !accountNumber || !ifsc || !consent) {
       swal.fire("Validation Error", "All fields are required", "warning");
       return;
     }
 
     if (wallet < credits) {
-      swal.fire("Insufficient Credits", "Not enough credits", "error");
+      swal.fire("Insufficient Credits", "Not enough balance", "error");
       return;
     }
 
+    /* ✅ PROPER CONFIRM BOX WITH DETAILS */
     const confirm = await swal.fire({
       title: "Confirm Bank Account Verification",
       html: `
-        <p><b>File No:</b> ${fileNo}</p>
-        <p><b>Credits Required:</b> ${credits}</p>
-        <p><b>Wallet Balance:</b> ${wallet}</p>
+        <p><b>Account Number:</b> ${accountNumber}</p>
+        <p><b>IFSC:</b> ${ifsc}</p>
+        <p><b>File Number:</b> ${fileNo}</p>   
       `,
       icon: "question",
       showCancelButton: true,
@@ -66,40 +68,61 @@ export default function FetchBankAccountVerify() {
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchBankAccountVerifyController", {
+      /* CACHE CHECK */
+      const checkRes = await api.post("api/checkBankAccountVerifyCache", {
+        mas_ser_id,
+        mas_cat_id,
+        account_number: accountNumber,
+        ifsc,
+      });
+
+      let useCache = false;
+
+      if (checkRes.data.hasCache) {
+        const fetchedDate = new Date(
+          checkRes.data.lastFetchedAt,
+        ).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+        const cacheConfirm = await swal.fire({
+          title: "Previous Data Found",
+          html: `Last fetched on: <b>${fetchedDate}</b>`,
+          icon: "question",
+          showConfirmButton: true,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Use Old Data",
+          denyButtonText: "Fetch Fresh",
+          cancelButtonText: "Cancel",
+     customClass: {
+            confirmButton: "btn-use-old",
+            denyButton: "btn-fetch-fresh",
+          },
+            allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+
+        if (cacheConfirm.isConfirmed) useCache = true;
+        else if (cacheConfirm.isDenied) useCache = false;
+        else {
+          setLoading(false);
+          return;
+        }
+      }
+
+      const executeRes = await api.post("api/executeBankAccountVerify", {
         usr_ser_id,
+        mas_cat_id,
+        mas_ser_id,
         file_no: fileNo,
         account_number: accountNumber,
         ifsc,
-        consent: "Y",
+        use_cache: useCache,
       });
 
-      const apiData = res.data?.data;
-      const code = apiData?.data?.code;
-
-      if (code !== "1000") {
-        swal.fire(
-          "Verification Failed",
-          apiData?.data?.message || "Unable to verify bank account",
-          "info",
-        );
-        setResult(apiData);
-        return;
-      }
-
-      setResult(apiData);
-
-      swal.fire(
-        "Success",
-        `
-        Bank account verified successfully<br/>
-        Credits Deducted: <b>${credits}</b><br/>
-        Remaining Wallet: <b>${wallet - credits}</b>
-        `,
-        "success",
-      );
-
+      setResult(executeRes.data?.data);
       fetchWallet();
+
+      swal.fire("Completed", "Request processed successfully", "success");
     } catch {
       swal.fire("Error", "Server error", "error");
     } finally {
@@ -109,66 +132,81 @@ export default function FetchBankAccountVerify() {
 
   /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
-    const bank = result?.data?.bank_account_data;
-    if (!bank) {
-      swal.fire("No Data", "Nothing to export", "warning");
-      return;
-    }
+    if (!result) return;
+
+    const bank = result?.data?.bank_account_data || {};
+    const requestId = result?.request_id || "-";
+    const transactionId = result?.transaction_id || "-";
 
     const doc = {
       content: [
-        { text: "Bank Account Verification Report", style: "header" },
+        {
+          text: "Bank Account Verification Report",
+          style: "header",
+        },
+
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
+
+        /* ✅ QR CODE */
+        {
+          qr: requestId !== "-" ? requestId : "BANK-VERIFY",
+          fit: 100,
+          alignment: "right",
+          margin: [0, 10],
+        },
+
+        { text: "Bank Details", style: "sub" },
 
         {
           table: {
-            widths: ["35%", "65%"],
+            widths: ["40%", "60%"],
             body: [
-              ["Service Name", service_name],
-              ["File Number", fileNo],
-              ["Credits Used", credits],
-            ],
-          },
-          layout: "lightHorizontalLines",
-          marginBottom: 10,
-        },
-
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["Account Holder Name", val(bank.name)],
-              ["Bank Name", val(bank.bank_name)],
-              ["Branch", val(bank.branch)],
-              ["City", val(bank.city)],
-              ["MICR", val(bank.micr)],
-              ["UTR", val(bank.utr)],
+              ["Reference ID", bank.reference_id || "-"],
+              ["Name", bank.name || "-"],
+              ["Bank Name", bank.bank_name || "-"],
+              ["UTR", bank.utr || "-"],
+              ["City", bank.city || "-"],
+              ["Branch", bank.branch || "-"],
+              ["MICR", bank.micr || "-"],
+              ["Account Number", accountNumber || "-"],
+              ["IFSC", ifsc || "-"],
             ],
           },
           layout: "lightHorizontalLines",
         },
 
+        { text: "Full API Response", style: "sub", margin: [0, 10] },
+
         {
-          text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
-          fontSize: 9,
-          italics: true,
+          text: JSON.stringify(result, null, 2),
+          fontSize: 8,
         },
       ],
+
       styles: {
-        header: { fontSize: 18, bold: true, marginBottom: 10 },
+        header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10],
+        },
+        sub: {
+          fontSize: 14,
+          bold: true,
+          margin: [0, 10, 0, 5],
+        },
       },
     };
 
     pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
   };
 
-  const bank = result?.data?.bank_account_data;
+  const code = result?.data?.code;
+  const badgeVariant = code === "1000" ? "success" : "warning";
 
-  /* ================= UI ================= */
   return (
     <Row>
       <Col md={12}>
-        {/* HEADER */}
         <Card body className="mb-3">
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name}</h4>
@@ -177,13 +215,6 @@ export default function FetchBankAccountVerify() {
           </p>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
-        {/* FORM */}
         <Card body className="mb-4">
           <Row>
             <Col md={6}>
@@ -231,44 +262,19 @@ export default function FetchBankAccountVerify() {
           </Button>
         </Card>
 
-        {/* RESULT */}
-        {bank && (
+        {result && (
           <Card body>
             <div className="d-flex justify-content-between align-items-center">
-              <h5>Bank Account Details</h5>
+              <h5>
+                Result <Badge bg={badgeVariant}>{code}</Badge>
+              </h5>
               <Button variant="outline-primary" onClick={exportPdf}>
                 Export PDF
               </Button>
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                <tr>
-                  <th>Name</th>
-                  <td>{val(bank.name)}</td>
-                </tr>
-                <tr>
-                  <th>Bank</th>
-                  <td>{val(bank.bank_name)}</td>
-                </tr>
-                <tr>
-                  <th>Branch</th>
-                  <td>{val(bank.branch)}</td>
-                </tr>
-                <tr>
-                  <th>City</th>
-                  <td>{val(bank.city)}</td>
-                </tr>
-                <tr>
-                  <th>MICR</th>
-                  <td>{val(bank.micr)}</td>
-                </tr>
-                <tr>
-                  <th>UTR</th>
-                  <td>{val(bank.utr)}</td>
-                </tr>
-              </tbody>
-            </Table>
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>

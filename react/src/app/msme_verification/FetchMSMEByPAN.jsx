@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Card, Row, Col, Form, Button, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
+import JsonTableViewer from "../components/JsonTableViewer";
 
 /* ================= PDF ================= */
 import pdfMake from "pdfmake/build/pdfmake";
@@ -14,7 +15,7 @@ const Required = () => <span style={{ color: "red" }}> *</span>;
 export default function FetchMSMEByPAN() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { usr_ser_id, service_name } = state || {};
+  const { usr_ser_id, service_name, mas_ser_id, mas_cat_id } = state || {};
 
   const [wallet, setWallet] = useState(0);
   const [fileNo, setFileNo] = useState("");
@@ -41,14 +42,14 @@ export default function FetchMSMEByPAN() {
     }
 
     const confirm = await swal.fire({
-      title: "Confirm Fetch",
+      title: "Confirm MSME Fetch",
       html: `
-        <b>PAN:</b> ${pan}<br/>
-        <b>File No:</b> ${fileNo}<br/>
-        <b>Detailed Response:</b> ${detailed ? "YES" : "NO"}
+        <p><b>PAN:</b> ${pan}</p>
+        <p><b>File Number:</b> ${fileNo}</p>
+        <p><b>Detailed:</b> ${detailed ? "YES" : "NO"}</p>
       `,
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Proceed",
     });
 
     if (!confirm.isConfirmed) return;
@@ -57,31 +58,78 @@ export default function FetchMSMEByPAN() {
     setResult(null);
 
     try {
-      const res = await api.post("api/fetchMSMEByPanController", {
+      /* ===== CACHE CHECK ===== */
+      const checkRes = await api.post("api/checkMSMEPanCache", {
+        mas_ser_id,
+        mas_cat_id,
+        pan_number: pan,
+      });
+
+      let useCache = false;
+
+      if (checkRes.data.hasCache) {
+        const fetchedDate = new Date(
+          checkRes.data.lastFetchedAt,
+        ).toLocaleString("en-IN");
+
+        const cacheConfirm = await swal.fire({
+          title: "Previous Data Found",
+          html: `Last fetched on: <b>${fetchedDate}</b>`,
+          showConfirmButton: true,
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "Use Old Data",
+          denyButtonText: "Fetch Fresh",
+               customClass: {
+            confirmButton: "btn-use-old",
+            denyButton: "btn-fetch-fresh",
+          },
+            allowOutsideClick: false,
+          allowEscapeKey: false,
+        });
+
+        if (cacheConfirm.isConfirmed) useCache = true;
+        else if (!cacheConfirm.isDenied) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      const res = await api.post("api/executeMSMEPan", {
         usr_ser_id,
+        mas_ser_id,
+        mas_cat_id,
         file_no: fileNo,
         pan_number: pan,
         detailed_response: detailed,
-        consent: "Y",
+        use_cache: useCache,
       });
 
-      const apiData = res.data?.data?.data;
-      const code = apiData?.code;
+      const fullResponse = res.data?.data;
+      setResult(fullResponse);
+
+      const code = fullResponse?.data?.code;
 
       if (!["1014", "1016"].includes(code)) {
-        swal.fire("Info", apiData?.message || "No record found", "info");
-        setResult(apiData);
-        return;
+        swal.fire(
+          "Info",
+          fullResponse?.data?.message || "No record found",
+          "info",
+        );
+      } else {
+        swal.fire("Success", "MSME details fetched", "success");
       }
-
-      setResult(apiData);
-      swal.fire("Success", apiData?.message, "success");
-    } catch (err) {
-      swal.fire("Error", "Something went wrong", "error");
+    } catch {
+      swal.fire("Error", "Server error", "error");
     } finally {
       setLoading(false);
     }
   };
+
+  const code = result?.data?.code;
+  const badgeVariant = ["1014", "1016"].includes(code)
+    ? "success"
+    : "secondary";
 
   /* ================= PDF EXPORT ================= */
   const exportPdf = () => {
@@ -90,24 +138,38 @@ export default function FetchMSMEByPAN() {
       return;
     }
 
+    const requestId = result?.request_id || "MSME_REQUEST";
+    const transactionId = result?.transaction_id || "-";
+
     const rows = [];
 
-    if (result.udyam_number) rows.push(["Udyam Number", result.udyam_number]);
+    if (result?.data?.udyam_number)
+      rows.push(["Udyam Number", result.data.udyam_number]);
 
-    if (result.enterprise_data) {
-      Object.entries(result.enterprise_data).forEach(([k, v]) => {
-        if (typeof v === "object") {
-          rows.push([k, JSON.stringify(v)]);
-        } else {
-          rows.push([k, String(v)]);
-        }
+    if (result?.data?.enterprise_data) {
+      Object.entries(result.data.enterprise_data).forEach(([k, v]) => {
+        rows.push([k, typeof v === "object" ? JSON.stringify(v) : String(v)]);
       });
     }
 
-    const doc = {
+    const docDefinition = {
+      pageSize: "A4",
+      pageMargins: [40, 60, 40, 60],
+
       content: [
         { text: "MSME Fetch by PAN Report", style: "header" },
 
+        { text: `Request ID: ${requestId}` },
+        { text: `Transaction ID: ${transactionId}` },
+
+        {
+          qr: requestId,
+          fit: 90,
+          alignment: "right",
+          margin: [0, 10],
+        },
+
+        { text: "Request Details", style: "subHeader" },
         {
           table: {
             widths: ["40%", "60%"],
@@ -118,78 +180,89 @@ export default function FetchMSMEByPAN() {
             ],
           },
           layout: "lightHorizontalLines",
-          marginBottom: 15,
+          margin: [0, 5],
         },
 
+        { text: "MSME Data", style: "subHeader" },
         {
           table: {
             widths: ["40%", "60%"],
             body: rows,
           },
           layout: "lightHorizontalLines",
+          margin: [0, 5],
+        },
+
+        { text: "Full API Response", style: "subHeader", margin: [0, 15] },
+        {
+          text: JSON.stringify(result, null, 2),
+          fontSize: 7,
         },
 
         {
           text: `Generated On: ${new Date().toLocaleString()}`,
-          marginTop: 15,
+          alignment: "right",
           fontSize: 9,
           italics: true,
-          alignment: "right",
+          margin: [0, 10],
         },
       ],
+
       styles: {
         header: {
           fontSize: 18,
           bold: true,
           marginBottom: 10,
         },
+        subHeader: {
+          fontSize: 14,
+          bold: true,
+          marginTop: 10,
+          marginBottom: 5,
+        },
       },
     };
 
-    pdfMake.createPdf(doc).download(`MSME_By_PAN_${fileNo}.pdf`);
+    pdfMake.createPdf(docDefinition).download(`MSME_By_PAN_${fileNo}.pdf`);
   };
 
   return (
     <Row>
       <Col md={12}>
         {/* HEADER */}
-        <Card body className="mb-3">
+        <Card body>
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <h4 className="mt-3">{service_name || "Fetch MSME by PAN"}</h4>
         </Card>
 
-        {/* WALLET */}
-        <Card body className="mb-3 text-center">
-          <h6>💰 Wallet Balance</h6>
-          <h2 className="text-success">{wallet}</h2>
-        </Card>
-
         {/* FORM */}
-        <Card body className="mb-4">
-          <Form.Group>
-            <Form.Label>
-              File Number <Required />
-            </Form.Label>
-            <Form.Control
-              value={fileNo}
-              onChange={(e) => setFileNo(e.target.value)}
-            />
-          </Form.Group>
+        <Card body className="mt-3">
+          <Row>
+            <Col md={6}>
+              <Form.Label>
+                File Number <Required />
+              </Form.Label>
+              <Form.Control
+                value={fileNo}
+                onChange={(e) => setFileNo(e.target.value)}
+              />
+            </Col>
 
-          <Form.Group className="mt-2">
-            <Form.Label>
-              PAN Number <Required />
-            </Form.Label>
-            <Form.Control
-              value={pan}
-              maxLength={10}
-              onChange={(e) => setPan(e.target.value.toUpperCase())}
-            />
-          </Form.Group>
+            <Col md={6}>
+              <Form.Label>
+                PAN Number <Required />
+              </Form.Label>
+              <Form.Control
+                value={pan}
+                maxLength={10}
+                onChange={(e) => setPan(e.target.value.toUpperCase())}
+              />
+            </Col>
+          </Row>
 
           <Form.Check
             className="mt-2"
-            label="Detailed Response (Certificate + NIC + Units)"
+            label="Detailed Response"
             checked={detailed}
             onChange={(e) => setDetailed(e.target.checked)}
           />
@@ -208,28 +281,19 @@ export default function FetchMSMEByPAN() {
 
         {/* RESULT */}
         {result && (
-          <Card body>
+          <Card body className="mt-4">
             <div className="d-flex justify-content-between align-items-center">
-              <h5>MSME Result</h5>
+              <h5>
+                Result <Badge bg={badgeVariant}>{code}</Badge>
+              </h5>
+
               <Button variant="outline-primary" onClick={exportPdf}>
-                📄 Export PDF
+                Export PDF
               </Button>
             </div>
 
-            <Table bordered className="mt-3">
-              <tbody>
-                {Object.entries(result).map(([k, v]) => (
-                  <tr key={k}>
-                    <th>{k}</th>
-                    <td>
-                      {typeof v === "object"
-                        ? JSON.stringify(v, null, 2)
-                        : String(v)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <h6 className="mt-3">Full API Response</h6>
+            <JsonTableViewer data={result} />
           </Card>
         )}
       </Col>
