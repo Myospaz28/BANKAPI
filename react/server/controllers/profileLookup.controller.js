@@ -18,13 +18,7 @@ export const fetchPersonalProfileController = async (req, res) => {
     } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (
-      !usr_ser_id ||
-      !phone ||
-      !first_name ||
-      !file_no ||
-      consent !== "Y"
-    ) {
+    if (!usr_ser_id || !phone || !first_name || !file_no || consent !== "Y") {
       return res.status(400).json({
         success: false,
         message: "Invalid payload",
@@ -41,7 +35,7 @@ export const fetchPersonalProfileController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -60,7 +54,7 @@ export const fetchPersonalProfileController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -90,7 +84,7 @@ export const fetchPersonalProfileController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -111,7 +105,7 @@ export const fetchPersonalProfileController = async (req, res) => {
       `UPDATE users
        SET wallet_amount = ?
        WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     /* ================= WALLET TRANSACTION ================= */
@@ -125,7 +119,7 @@ export const fetchPersonalProfileController = async (req, res) => {
         reference_type,
         created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     const walletTransactionId = walletTxn.insertId;
@@ -151,7 +145,7 @@ export const fetchPersonalProfileController = async (req, res) => {
         "success",
         walletTransactionId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -168,10 +162,7 @@ export const fetchPersonalProfileController = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error(
-      "❌ Personal Profile Error:",
-      error.response?.data || error
-    );
+    console.error("❌ Personal Profile Error:", error.response?.data || error);
     res.status(500).json({
       success: false,
       message: "Personal profile fetch failed",
@@ -180,7 +171,6 @@ export const fetchPersonalProfileController = async (req, res) => {
     connection.release();
   }
 };
-
 
 export const fetchNationalIdsByPhoneController = async (req, res) => {
   const connection = await db.getConnection();
@@ -199,13 +189,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
     } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (
-      !usr_ser_id ||
-      !phone ||
-      !first_name ||
-      !file_no ||
-      consent !== "Y"
-    ) {
+    if (!usr_ser_id || !phone || !first_name || !file_no || consent !== "Y") {
       return res.status(400).json({
         success: false,
         message: "Invalid payload",
@@ -222,7 +206,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -241,7 +225,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -271,7 +255,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -292,7 +276,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
       `UPDATE users
        SET wallet_amount = ?
        WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     /* ================= WALLET TRANSACTION ================= */
@@ -306,7 +290,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
         reference_type,
         created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     const walletTransactionId = walletTxn.insertId;
@@ -332,7 +316,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
         "success",
         walletTransactionId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -349,10 +333,7 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error(
-      "❌ National IDs Error:",
-      error.response?.data || error
-    );
+    console.error("❌ National IDs Error:", error.response?.data || error);
     res.status(500).json({
       success: false,
       message: "National IDs fetch failed",
@@ -361,7 +342,6 @@ export const fetchNationalIdsByPhoneController = async (req, res) => {
     connection.release();
   }
 };
-
 
 export const fetchAddressByPhoneController = async (req, res) => {
   const connection = await db.getConnection();
@@ -380,13 +360,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
     } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (
-      !usr_ser_id ||
-      !phone ||
-      !first_name ||
-      !file_no ||
-      consent !== "Y"
-    ) {
+    if (!usr_ser_id || !phone || !first_name || !file_no || consent !== "Y") {
       return res.status(400).json({
         success: false,
         message: "Invalid payload",
@@ -403,7 +377,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -422,7 +396,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -452,7 +426,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -473,7 +447,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
       `UPDATE users
        SET wallet_amount = ?
        WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     /* ================= WALLET TRANSACTION ================= */
@@ -487,7 +461,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
         reference_type,
         created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     const walletTransactionId = walletTxn.insertId;
@@ -513,7 +487,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
         "success",
         walletTransactionId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -530,10 +504,7 @@ export const fetchAddressByPhoneController = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error(
-      "❌ Address By Phone Error:",
-      error.response?.data || error
-    );
+    console.error("❌ Address By Phone Error:", error.response?.data || error);
     res.status(500).json({
       success: false,
       message: "Address fetch failed",
@@ -542,7 +513,6 @@ export const fetchAddressByPhoneController = async (req, res) => {
     connection.release();
   }
 };
-
 
 export const fetchPanByPhoneController = async (req, res) => {
   const connection = await db.getConnection();
@@ -560,13 +530,7 @@ export const fetchPanByPhoneController = async (req, res) => {
     } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (
-      !usr_ser_id ||
-      !phone ||
-      !first_name ||
-      !file_no ||
-      consent !== "Y"
-    ) {
+    if (!usr_ser_id || !phone || !first_name || !file_no || consent !== "Y") {
       return res.status(400).json({
         success: false,
         message: "Invalid payload",
@@ -583,7 +547,7 @@ export const fetchPanByPhoneController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -602,7 +566,7 @@ export const fetchPanByPhoneController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -631,7 +595,7 @@ export const fetchPanByPhoneController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -652,7 +616,7 @@ export const fetchPanByPhoneController = async (req, res) => {
       `UPDATE users
        SET wallet_amount = ?
        WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     /* ================= WALLET TRANSACTION ================= */
@@ -666,7 +630,7 @@ export const fetchPanByPhoneController = async (req, res) => {
         reference_type,
         created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     const walletTransactionId = walletTxn.insertId;
@@ -692,7 +656,7 @@ export const fetchPanByPhoneController = async (req, res) => {
         "success",
         walletTransactionId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -719,8 +683,6 @@ export const fetchPanByPhoneController = async (req, res) => {
   }
 };
 
-
-
 export const mobileLookupController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -728,8 +690,15 @@ export const mobileLookupController = async (req, res) => {
     const userId = req.user.userId;
     const { usr_ser_id, mobile_number, consent } = req.body;
 
-    if (!usr_ser_id || !mobile_number || mobile_number.length !== 10 || consent !== 'Y') {
-      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    if (
+      !usr_ser_id ||
+      !mobile_number ||
+      mobile_number.length !== 10 ||
+      consent !== "Y"
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
     }
 
     await connection.beginTransaction();
@@ -744,7 +713,9 @@ export const mobileLookupController = async (req, res) => {
 
     if (!service) {
       await connection.rollback();
-      return res.status(403).json({ success: false, message: 'Service not allowed' });
+      return res
+        .status(403)
+        .json({ success: false, message: "Service not allowed" });
     }
 
     const creditsUsed = Number(service.actual_credits);
@@ -758,23 +729,25 @@ export const mobileLookupController = async (req, res) => {
 
     if (openingBalance < creditsUsed) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: 'Insufficient credits' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Insufficient credits" });
     }
 
     const apiRes = await axios.post(
-      'https://api.gridlines.io/profile-api/telco/mobile-lookup',
+      "https://api.gridlines.io/profile-api/telco/mobile-lookup",
       { mobile_number, consent },
       {
         headers: {
-          'X-API-Key': process.env.GRIDLINES_API_KEY,
-          'X-Auth-Type': 'API-Key',
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
         },
       },
     );
 
     const code = apiRes.data?.data?.code;
 
-    if (code !== '1007') {
+    if (code !== "1007") {
       await connection.rollback();
       return res.json({ success: true, data: apiRes.data });
     }
@@ -809,13 +782,11 @@ export const mobileLookupController = async (req, res) => {
     });
   } catch (err) {
     await connection.rollback();
-    res.status(500).json({ success: false, message: 'Mobile lookup failed' });
+    res.status(500).json({ success: false, message: "Mobile lookup failed" });
   } finally {
     connection.release();
   }
 };
-
-
 
 export const mobileNumberAgeController1 = async (req, res) => {
   const connection = await db.getConnection();
@@ -824,8 +795,16 @@ export const mobileNumberAgeController1 = async (req, res) => {
     const userId = req.user.userId;
     const { usr_ser_id, file_no, mobile_number, consent } = req.body;
 
-    if (!usr_ser_id || !file_no || !mobile_number || mobile_number.length !== 10 || consent !== "Y") {
-      return res.status(400).json({ success: false, message: "Invalid payload" });
+    if (
+      !usr_ser_id ||
+      !file_no ||
+      !mobile_number ||
+      mobile_number.length !== 10 ||
+      consent !== "Y"
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
     }
 
     await connection.beginTransaction();
@@ -834,26 +813,30 @@ export const mobileNumberAgeController1 = async (req, res) => {
       `SELECT actual_credits FROM user_services
        WHERE usr_ser_id = ? AND users_id = ? AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
       await connection.rollback();
-      return res.status(403).json({ success: false, message: "Service not allowed" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Service not allowed" });
     }
 
     const creditsUsed = Number(service.actual_credits);
 
     const [[user]] = await connection.query(
       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
 
     if (openingBalance < creditsUsed) {
       await connection.rollback();
-      return res.status(400).json({ success: false, message: "Insufficient credits" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Insufficient credits" });
     }
 
     const apiRes = await axios.post(
@@ -864,7 +847,7 @@ export const mobileNumberAgeController1 = async (req, res) => {
           "X-API-Key": process.env.GRIDLINES_API_KEY,
           "X-Auth-Type": "API-Key",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -878,21 +861,21 @@ export const mobileNumberAgeController1 = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
       `INSERT INTO wallet_transactions
        (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
       `INSERT INTO user_service_logs
        (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
        VALUES (?, ?, ?, ?, 'MOBILE_NUMBER_AGE', 'success', ?, ?)`,
-      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId]
+      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId],
     );
 
     await connection.commit();
@@ -908,7 +891,9 @@ export const mobileNumberAgeController1 = async (req, res) => {
     });
   } catch (err) {
     await connection.rollback();
-    res.status(500).json({ success: false, message: "Mobile number age failed" });
+    res
+      .status(500)
+      .json({ success: false, message: "Mobile number age failed" });
   } finally {
     connection.release();
   }
@@ -950,7 +935,7 @@ export const mobileNumberAgeController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     console.log("📦 Service:", service);
@@ -973,7 +958,7 @@ export const mobileNumberAgeController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     console.log("💰 Wallet Row:", user);
@@ -1005,10 +990,13 @@ export const mobileNumberAgeController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
-    console.log("🌐 Gridlines Raw Response:", JSON.stringify(apiRes.data, null, 2));
+    console.log(
+      "🌐 Gridlines Raw Response:",
+      JSON.stringify(apiRes.data, null, 2),
+    );
 
     const code = apiRes?.data?.data?.code;
     console.log("📟 Gridlines Code:", code);
@@ -1029,7 +1017,7 @@ export const mobileNumberAgeController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
     console.log("✅ Wallet updated");
 
@@ -1044,7 +1032,7 @@ export const mobileNumberAgeController = async (req, res) => {
         reference_type,
         created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     console.log("🧾 Wallet Transaction ID:", walletTxn.insertId);
@@ -1070,7 +1058,7 @@ export const mobileNumberAgeController = async (req, res) => {
         "success",
         walletTxn.insertId,
         userId,
-      ]
+      ],
     );
 
     console.log("📝 Service log inserted");
@@ -1106,9 +1094,6 @@ export const mobileNumberAgeController = async (req, res) => {
   }
 };
 
-
-
-
 export const digitalFootprintController = async (req, res) => {
   const connection = await db.getConnection();
   console.log("🔵 [DIGITAL FOOTPRINT] Controller hit");
@@ -1117,7 +1102,14 @@ export const digitalFootprintController = async (req, res) => {
     const userId = req.user.userId;
     console.log("👤 User ID:", userId);
 
-    const { usr_ser_id, file_no, phone, email = "", name = "", consent } = req.body;
+    const {
+      usr_ser_id,
+      file_no,
+      phone,
+      email = "",
+      name = "",
+      consent,
+    } = req.body;
     console.log("📥 Request Body:", req.body);
 
     /* ================= VALIDATION ================= */
@@ -1146,7 +1138,7 @@ export const digitalFootprintController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     console.log("📦 Service:", service);
@@ -1165,7 +1157,7 @@ export const digitalFootprintController = async (req, res) => {
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1197,7 +1189,7 @@ export const digitalFootprintController = async (req, res) => {
           "Content-Type": "application/json",
         },
         timeout: 15000,
-      }
+      },
     );
 
     console.log("🌐 Raw API Response:", JSON.stringify(apiRes.data, null, 2));
@@ -1219,7 +1211,7 @@ export const digitalFootprintController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     /* ================= WALLET TRANSACTION ================= */
@@ -1229,7 +1221,7 @@ export const digitalFootprintController = async (req, res) => {
         opening_balance, closing_balance,
         reference_type, created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     /* ================= SERVICE LOG ================= */
@@ -1248,7 +1240,7 @@ export const digitalFootprintController = async (req, res) => {
         "success",
         walletTxn.insertId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -1287,7 +1279,6 @@ export const digitalFootprintController = async (req, res) => {
   }
 };
 
-
 export const checkEntityLinkageController = async (req, res) => {
   const connection = await db.getConnection();
   console.log("🔵 [ENTITY LINKAGE] Controller hit");
@@ -1319,7 +1310,7 @@ export const checkEntityLinkageController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     console.log("📦 Service:", service);
@@ -1338,7 +1329,7 @@ export const checkEntityLinkageController = async (req, res) => {
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1364,7 +1355,7 @@ export const checkEntityLinkageController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     console.log("🌐 Gridlines Response:", JSON.stringify(apiRes.data, null, 2));
@@ -1386,21 +1377,21 @@ export const checkEntityLinkageController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
       `INSERT INTO wallet_transactions
        (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
       `INSERT INTO user_service_logs
        (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
        VALUES (?, ?, ?, ?, 'ENTITY_LINKAGE', 'success', ?, ?)`,
-      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId]
+      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId],
     );
 
     await connection.commit();
@@ -1427,8 +1418,6 @@ export const checkEntityLinkageController = async (req, res) => {
     console.log("🔚 DB connection released");
   }
 };
-
-
 
 export const fetchElectricityBillController = async (req, res) => {
   const connection = await db.getConnection();
@@ -1477,7 +1466,7 @@ export const fetchElectricityBillController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     console.log("📦 Service:", service);
@@ -1495,7 +1484,7 @@ export const fetchElectricityBillController = async (req, res) => {
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1528,7 +1517,7 @@ export const fetchElectricityBillController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     console.log("🌐 Gridlines Response:", JSON.stringify(apiRes.data, null, 2));
@@ -1550,21 +1539,21 @@ export const fetchElectricityBillController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
       `INSERT INTO wallet_transactions
        (users_id, transaction_type, amount, opening_balance, closing_balance, reference_type, created_by)
        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
       `INSERT INTO user_service_logs
        (users_id, usr_ser_id, file_no, credits_used, api_name, api_status, wallet_transaction_id, created_by)
        VALUES (?, ?, ?, ?, 'ELECTRICITY_BILL', 'success', ?, ?)`,
-      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId]
+      [userId, usr_ser_id, file_no, creditsUsed, walletTxn.insertId, userId],
     );
 
     await connection.commit();
@@ -1592,21 +1581,24 @@ export const fetchElectricityBillController = async (req, res) => {
   }
 };
 
-
-
-
 export const fetchMobilePrefillController = async (req, res) => {
   const connection = await db.getConnection();
   try {
     console.log("📥 Incoming Mobile Prefill request:", req.body);
 
     const userId = req.user.userId;
-    let { usr_ser_id, mobile_number, first_name, last_name, file_no } = req.body;
+    let { usr_ser_id, mobile_number, first_name, last_name, file_no } =
+      req.body;
 
     mobile_number = mobile_number?.trim();
     const consent = "Y";
 
-    if (!usr_ser_id || !mobile_number || mobile_number.length !== 10 || !file_no) {
+    if (
+      !usr_ser_id ||
+      !mobile_number ||
+      mobile_number.length !== 10 ||
+      !file_no
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid mobile number or payload",
@@ -1623,7 +1615,7 @@ export const fetchMobilePrefillController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -1642,7 +1634,7 @@ export const fetchMobilePrefillController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1672,7 +1664,7 @@ export const fetchMobilePrefillController = async (req, res) => {
             "X-Auth-Type": "API-Key",
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     } catch (err) {
       console.log("❌ Gridlines error:", err.response?.data);
@@ -1699,7 +1691,7 @@ export const fetchMobilePrefillController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
@@ -1708,7 +1700,7 @@ export const fetchMobilePrefillController = async (req, res) => {
         opening_balance, closing_balance,
         reference_type, created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
@@ -1726,7 +1718,7 @@ export const fetchMobilePrefillController = async (req, res) => {
         "success",
         walletTxn.insertId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -1752,7 +1744,6 @@ export const fetchMobilePrefillController = async (req, res) => {
   }
 };
 
-
 export const fetchMobileNameLookupController = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -1760,7 +1751,13 @@ export const fetchMobileNameLookupController = async (req, res) => {
     const { usr_ser_id, mobile_number, file_no, consent } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (!usr_ser_id || !mobile_number || mobile_number.length !== 10 || !file_no || consent !== "Y") {
+    if (
+      !usr_ser_id ||
+      !mobile_number ||
+      mobile_number.length !== 10 ||
+      !file_no ||
+      consent !== "Y"
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid payload",
@@ -1777,7 +1774,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -1796,7 +1793,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1822,7 +1819,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
           "X-Auth-Type": "API-Key",
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const code = apiRes.data?.data?.code;
@@ -1841,7 +1838,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
@@ -1850,7 +1847,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
         opening_balance, closing_balance,
         reference_type, created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
@@ -1868,7 +1865,7 @@ export const fetchMobileNameLookupController = async (req, res) => {
         "success",
         walletTxn.insertId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -1884,7 +1881,10 @@ export const fetchMobileNameLookupController = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    console.error("❌ Mobile Name Lookup error:", error.response?.data || error);
+    console.error(
+      "❌ Mobile Name Lookup error:",
+      error.response?.data || error,
+    );
     res.status(500).json({
       success: false,
       message: "Mobile Name Lookup failed",
@@ -1893,8 +1893,6 @@ export const fetchMobileNameLookupController = async (req, res) => {
     connection.release();
   }
 };
-
-
 
 export const panLookupByMobileController = async (req, res) => {
   const connection = await db.getConnection();
@@ -1919,7 +1917,7 @@ export const panLookupByMobileController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) {
@@ -1938,7 +1936,7 @@ export const panLookupByMobileController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     const openingBalance = Number(user.wallet_amount);
@@ -1963,7 +1961,7 @@ export const panLookupByMobileController = async (req, res) => {
             "X-Auth-Type": "API-Key",
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     } catch (err) {
       if (err.response?.status === 403) {
@@ -1992,7 +1990,7 @@ export const panLookupByMobileController = async (req, res) => {
 
     await connection.query(
       `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-      [closingBalance, userId]
+      [closingBalance, userId],
     );
 
     const [walletTxn] = await connection.query(
@@ -2001,7 +1999,7 @@ export const panLookupByMobileController = async (req, res) => {
         opening_balance, closing_balance,
         reference_type, created_by
       ) VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-      [userId, creditsUsed, openingBalance, closingBalance, userId]
+      [userId, creditsUsed, openingBalance, closingBalance, userId],
     );
 
     await connection.query(
@@ -2020,7 +2018,7 @@ export const panLookupByMobileController = async (req, res) => {
         "success",
         walletTxn.insertId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -2046,10 +2044,7 @@ export const panLookupByMobileController = async (req, res) => {
   }
 };
 
-
-
-
-//new controllers 
+//new controllers
 export const checkEntityLinkageCacheController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2089,13 +2084,255 @@ export const checkEntityLinkageCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     return res.status(500).json({ success: false });
   } finally {
     connection.release();
   }
 };
+// export const executeEntityLinkageController = async (req, res) => {
+//   const connection = await db.getConnection();
+
+//   try {
+//     const userId = req.user.userId;
+
+//     const {
+//       usr_ser_id,
+//       mas_ser_id,
+//       mas_cat_id,
+//       file_no,
+//       mobile,
+//       pan,
+//       use_cache,
+//     } = req.body;
+
+//     /* ================= VALIDATION ================= */
+//     if (!usr_ser_id || !mas_ser_id || !mas_cat_id || !file_no) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid payload",
+//       });
+//     }
+
+//     if (!mobile && !pan) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Either Mobile or PAN is required",
+//       });
+//     }
+
+//     await connection.beginTransaction();
+
+//     /* ================= SERVICE CHECK ================= */
+//     const [[service]] = await connection.query(
+//       `SELECT actual_credits
+//        FROM user_services
+//        WHERE usr_ser_id = ?
+//          AND users_id = ?
+//          AND status = 'active'
+//        FOR UPDATE`,
+//       [usr_ser_id, userId]
+//     );
+
+//     if (!service) throw new Error("Service not allowed");
+
+//     const creditsUsed = Number(service.actual_credits);
+
+//     /* ================= WALLET CHECK ================= */
+//     const [[user]] = await connection.query(
+//       `SELECT wallet_amount
+//        FROM users
+//        WHERE users_id = ?
+//        FOR UPDATE`,
+//       [userId]
+//     );
+
+//     if (!user) throw new Error("User not found");
+
+//     const openingBalance = Number(user.wallet_amount);
+
+//     let fullResponse;
+//     let responseStatus = "failed";
+//     let shouldDeduct = false;
+//     let walletTransactionId = null;
+//     let transactionId = null;
+//     let requestId = null;
+//     let httpStatusCode = null;
+
+//     /* =====================================================
+//        ================= CACHE FLOW ========================
+//     ===================================================== */
+//     if (use_cache) {
+//       let cacheQuery = `
+//         SELECT *
+//         FROM service_data_fetch_log
+//         WHERE mas_ser_id = ?
+//         AND mas_cat_id = ?
+//       `;
+
+//       const cacheParams = [mas_ser_id, mas_cat_id];
+
+//       if (mobile) {
+//         cacheQuery += ` AND mobile_number = ?`;
+//         cacheParams.push(mobile);
+//       }
+
+//       if (pan) {
+//         cacheQuery += ` AND pan_number = ?`;
+//         cacheParams.push(pan);
+//       }
+
+//       cacheQuery += ` ORDER BY ser_fet_log_id DESC LIMIT 1`;
+
+//       const [[existing]] = await connection.query(cacheQuery, cacheParams);
+
+//       if (!existing) throw new Error("Cache not found");
+
+//       fullResponse = existing.api_response;
+//       responseStatus = existing.response_status;
+
+//       if (responseStatus === "success") {
+//         shouldDeduct = true;
+//       }
+//     }
+
+//     /* =====================================================
+//        ================= FRESH FLOW ========================
+//     ===================================================== */
+//     else {
+//       /* ===== GRIDLINES PAYLOAD (DYNAMIC) ===== */
+//       const payload = { consent: "Y" };
+//       if (mobile) payload.mobile = mobile;
+//       if (pan) payload.pan = pan;
+
+//       const apiRes = await axios.post(
+//         "https://api.gridlines.io/profile-api/check-entity-linkage",
+//         payload,
+//         {
+//           headers: {
+//             "X-API-Key": process.env.GRIDLINES_API_KEY,
+//             "X-Auth-Type": "API-Key",
+//             "Content-Type": "application/json",
+//           },
+//           validateStatus: () => true,
+//         }
+//       );
+
+//       fullResponse = apiRes.data;
+//       httpStatusCode = apiRes.status;
+
+//       const code = fullResponse?.data?.code;
+
+//       transactionId = fullResponse?.transaction_id || null;
+//       requestId = fullResponse?.request_id || null;
+
+//    if (code === "1009") {
+//   shouldDeduct = true;
+//   responseStatus = "success";
+// }
+// else if (code === "1010") {
+//   responseStatus = "no_data";
+// }
+// else {
+//   responseStatus = "failed";
+// }
+
+//       /* ===== INSERT FETCH LOG ===== */
+//       await connection.query(
+//         `INSERT INTO service_data_fetch_log
+//          (mas_ser_id, mas_cat_id, file_number,
+//           mobile_number, pan_number,
+//           api_response, response_status,
+//           http_status_code, created_by)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//         [
+//           mas_ser_id,
+//           mas_cat_id,
+//           file_no,
+//           mobile || null,
+//           pan || null,
+//           JSON.stringify(fullResponse),
+//           responseStatus,
+//           httpStatusCode,
+//           userId,
+//         ]
+//       );
+//     }
+
+//     /* ================= WALLET DEDUCTION ================= */
+//     if (shouldDeduct) {
+//       if (openingBalance < creditsUsed)
+//         throw new Error("Insufficient balance");
+
+//       const closingBalance = openingBalance - creditsUsed;
+
+//       await connection.query(
+//         `UPDATE users
+//          SET wallet_amount = ?
+//          WHERE users_id = ?`,
+//         [closingBalance, userId]
+//       );
+
+//       const [walletTxn] = await connection.query(
+//         `INSERT INTO wallet_transactions
+//          (users_id, transaction_type, amount,
+//           opening_balance, closing_balance,
+//           reference_type, created_by)
+//          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+//         [
+//           userId,
+//           creditsUsed,
+//           openingBalance,
+//           closingBalance,
+//           userId,
+//         ]
+//       );
+
+//       walletTransactionId = walletTxn.insertId;
+//     }
+
+//     /* ================= USER SERVICE LOG ================= */
+//     await connection.query(
+//       `INSERT INTO user_service_logs
+//        (users_id, usr_ser_id, file_no,
+//         credits_used, api_name, api_status,
+//         wallet_transaction_id,
+//         transaction_id, request_id, created_by)
+//        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//       [
+//         userId,
+//         usr_ser_id,
+//         file_no,
+//         shouldDeduct ? creditsUsed : 0,
+//         "ENTITY_LINKAGE",
+//         responseStatus,
+//         walletTransactionId,
+//         transactionId,
+//         requestId,
+//         userId,
+//       ]
+//     );
+
+//     await connection.commit();
+
+//     return res.json({
+//       success: true,
+//       data: fullResponse,
+//     });
+
+//   } catch (err) {
+//     await connection.rollback();
+//     console.error("❌ EXECUTE ENTITY LINKAGE ERROR:", err.message);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
 export const executeEntityLinkageController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2137,7 +2374,7 @@ export const executeEntityLinkageController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -2150,12 +2387,15 @@ export const executeEntityLinkageController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ mobile, pan });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -2164,10 +2404,9 @@ export const executeEntityLinkageController = async (req, res) => {
     let transactionId = null;
     let requestId = null;
     let httpStatusCode = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-    ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       let cacheQuery = `
         SELECT *
@@ -2196,17 +2435,17 @@ export const executeEntityLinkageController = async (req, res) => {
 
       fullResponse = existing.api_response;
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      requestId = fullResponse?.request_id || null;
+      transactionId = fullResponse?.transaction_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       ================= FRESH FLOW ========================
-    ===================================================== */
-    else {
-      /* ===== GRIDLINES PAYLOAD (DYNAMIC) ===== */
+      /* ================= FRESH API CALL ================= */
+    } else {
       const payload = { consent: "Y" };
       if (mobile) payload.mobile = mobile;
       if (pan) payload.pan = pan;
@@ -2221,7 +2460,7 @@ export const executeEntityLinkageController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -2232,19 +2471,16 @@ export const executeEntityLinkageController = async (req, res) => {
       transactionId = fullResponse?.transaction_id || null;
       requestId = fullResponse?.request_id || null;
 
-   if (code === "1009") {
-  shouldDeduct = true;
-  responseStatus = "success";
-}
-else if (code === "1010") {
-  responseStatus = "no_data";
-}
-else {
-  responseStatus = "failed";
-}
+      if (code === "1009") {
+        shouldDeduct = true;
+        responseStatus = "success";
+      } else if (code === "1010") {
+        responseStatus = "no_data";
+      } else {
+        responseStatus = "failed";
+      }
 
-      /* ===== INSERT FETCH LOG ===== */
-      await connection.query(
+      const [fetchInsert] = await connection.query(
         `INSERT INTO service_data_fetch_log
          (mas_ser_id, mas_cat_id, file_number,
           mobile_number, pan_number,
@@ -2261,22 +2497,23 @@ else {
           responseStatus,
           httpStatusCode,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
-        `UPDATE users
-         SET wallet_amount = ?
-         WHERE users_id = ?`,
-        [closingBalance, userId]
+        `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
@@ -2285,38 +2522,36 @@ else {
           opening_balance, closing_balance,
           reference_type, created_by)
          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
       `INSERT INTO user_service_logs
        (users_id, usr_ser_id, file_no,
-        credits_used, api_name, api_status,
+        input_payload, credits_used,
+        api_name, api_status,
         wallet_transaction_id,
-        transaction_id, request_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "ENTITY_LINKAGE",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -2325,7 +2560,6 @@ else {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE ENTITY LINKAGE ERROR:", err.message);
@@ -2339,9 +2573,6 @@ else {
   }
 };
 
-
-
-
 export const checkDigitalFootprintCacheController = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -2353,9 +2584,10 @@ export const checkDigitalFootprintCacheController = async (req, res) => {
        WHERE mas_ser_id = ?
          AND mas_cat_id = ?
          AND mobile_number = ?
+          AND api_name = 'DIGITAL_FOOTPRINT' 
        ORDER BY ser_fet_log_id DESC
        LIMIT 1`,
-      [mas_ser_id, mas_cat_id, phone]
+      [mas_ser_id, mas_cat_id, phone],
     );
 
     if (!existing) {
@@ -2377,6 +2609,7 @@ export const checkDigitalFootprintCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeDigitalFootprintController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2421,7 +2654,7 @@ export const executeDigitalFootprintController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -2434,12 +2667,15 @@ export const executeDigitalFootprintController = async (req, res) => {
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ phone, email, name });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -2447,20 +2683,19 @@ export const executeDigitalFootprintController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-    ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
         `SELECT *
          FROM service_data_fetch_log
          WHERE mas_ser_id = ?
            AND mas_cat_id = ?
-           AND mobile_number  = ?
+           AND mobile_number = ?
          ORDER BY ser_fet_log_id DESC
          LIMIT 1`,
-        [mas_ser_id, mas_cat_id, phone]
+        [mas_ser_id, mas_cat_id, phone],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -2471,19 +2706,17 @@ export const executeDigitalFootprintController = async (req, res) => {
           : existing.api_response;
 
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
 
-      transactionId = fullResponse?.transaction_id || null;
-      requestId = fullResponse?.request_id || null;
-    }
-
-    /* =====================================================
-       ================= FRESH FLOW ========================
-    ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/mobile/digital-footprint",
         {
@@ -2500,7 +2733,7 @@ export const executeDigitalFootprintController = async (req, res) => {
           },
           timeout: 20000,
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -2516,13 +2749,12 @@ export const executeDigitalFootprintController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      /* ===== STORE RAW RESPONSE ===== */
-      await connection.query(
+      const [fetchInsert] = await connection.query(
         `INSERT INTO service_data_fetch_log
-        (mas_ser_id, mas_cat_id, file_number, mobile_number ,
-         api_response, response_status,
-         http_status_code, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (mas_ser_id, mas_cat_id, file_number, mobile_number,
+          api_response, response_status,
+          http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -2532,62 +2764,60 @@ export const executeDigitalFootprintController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
-        `UPDATE users
-         SET wallet_amount = ?
-         WHERE users_id = ?`,
-        [closingBalance, userId]
+        `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
         `INSERT INTO wallet_transactions
-        (users_id, transaction_type, amount,
-         opening_balance, closing_balance,
-         reference_type, created_by)
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
       `INSERT INTO user_service_logs
-      (users_id, usr_ser_id, file_no,
-       credits_used, api_name,
-       api_status, wallet_transaction_id,
-       transaction_id, request_id, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "DIGITAL_FOOTPRINT",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -2619,11 +2849,6 @@ export const executeDigitalFootprintController = async (req, res) => {
   }
 };
 
-
-
-
-
-
 export const checkElectricityBillCacheController = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -2637,7 +2862,7 @@ export const checkElectricityBillCacheController = async (req, res) => {
          AND consumer_number = ?
        ORDER BY ser_fet_log_id DESC
        LIMIT 1`,
-      [mas_ser_id, mas_cat_id, consumer_number]
+      [mas_ser_id, mas_cat_id, consumer_number],
     );
 
     if (!existing) return res.json({ hasCache: false });
@@ -2657,6 +2882,7 @@ export const checkElectricityBillCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeElectricityBillController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2679,7 +2905,7 @@ export const executeElectricityBillController = async (req, res) => {
 
     await connection.beginTransaction();
 
-    /* SERVICE CHECK */
+    /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
       `SELECT actual_credits
        FROM user_services
@@ -2687,20 +2913,31 @@ export const executeElectricityBillController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
 
     const creditsUsed = Number(service.actual_credits);
 
-    /* WALLET CHECK */
+    /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount FROM users WHERE users_id = ? FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
+    if (!user) throw new Error("User not found");
+
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({
+      electricity_provider,
+      consumer_number,
+      mobile_number,
+      installation_number,
+      operator_code,
+    });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -2708,6 +2945,7 @@ export const executeElectricityBillController = async (req, res) => {
     let transactionId = null;
     let requestId = null;
     let walletTransactionId = null;
+    let serFetLogId = null;
 
     /* ================= CACHE FLOW ================= */
     if (use_cache) {
@@ -2718,21 +2956,28 @@ export const executeElectricityBillController = async (req, res) => {
            AND consumer_number = ?
          ORDER BY ser_fet_log_id DESC
          LIMIT 1`,
-        [mas_ser_id, mas_cat_id, consumer_number]
+        [mas_ser_id, mas_cat_id, consumer_number],
       );
 
       if (!existing) throw new Error("Cache not found");
 
-      fullResponse = JSON.parse(existing.api_response);
+      fullResponse =
+        typeof existing.api_response === "string"
+          ? JSON.parse(existing.api_response)
+          : existing.api_response;
+
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* ================= FRESH FLOW ================= */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/utility/fetch-electricity-bill",
         {
@@ -2750,12 +2995,12 @@ export const executeElectricityBillController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
-      const code = fullResponse?.data?.code;
 
+      const code = fullResponse?.data?.code;
       transactionId = fullResponse?.transaction_id || null;
       requestId = fullResponse?.request_id || null;
 
@@ -2768,12 +3013,12 @@ export const executeElectricityBillController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      await connection.query(
+      const [fetchInsert] = await connection.query(
         `INSERT INTO service_data_fetch_log
-        (mas_ser_id, mas_cat_id, file_number, consumer_number,
-         api_response, response_status,
-         http_status_code, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (mas_ser_id, mas_cat_id, file_number, consumer_number,
+          api_response, response_status,
+          http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -2783,59 +3028,60 @@ export const executeElectricityBillController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
 
-    /* WALLET DEDUCTION */
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
+
+    /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
         `INSERT INTO wallet_transactions
-        (users_id, transaction_type, amount,
-         opening_balance, closing_balance,
-         reference_type, created_by)
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
+    /* ================= SERVICE LOG ================= */
     await connection.query(
       `INSERT INTO user_service_logs
-      (users_id, usr_ser_id, file_no,
-       credits_used, api_name,
-       api_status, wallet_transaction_id,
-       transaction_id, request_id, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "ELECTRICITY_BILL",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -2855,9 +3101,6 @@ export const executeElectricityBillController = async (req, res) => {
   }
 };
 
-
-
-
 export const checkNationalIdsByPhoneCacheController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2872,7 +3115,7 @@ export const checkNationalIdsByPhoneCacheController = async (req, res) => {
          AND mobile_number = ?
        ORDER BY ser_fet_log_id DESC
        LIMIT 1`,
-      [mas_ser_id, mas_cat_id, phone]
+      [mas_ser_id, mas_cat_id, phone],
     );
 
     if (!existing) return res.json({ hasCache: false });
@@ -2885,7 +3128,6 @@ export const checkNationalIdsByPhoneCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ National ID Cache Error:", err.message);
     return res.status(500).json({ success: false });
@@ -2893,6 +3135,7 @@ export const checkNationalIdsByPhoneCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeNationalIdsByPhoneController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -2922,22 +3165,28 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
 
     const creditsUsed = Number(service.actual_credits);
 
+    /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
+    if (!user) throw new Error("User not found");
+
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ phone, first_name, last_name, pan });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -2945,10 +3194,10 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
     /* ================= CACHE FLOW ================= */
     if (use_cache) {
-
       const [[existing]] = await connection.query(
         `SELECT *
          FROM service_data_fetch_log
@@ -2957,7 +3206,7 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
            AND mobile_number = ?
          ORDER BY ser_fet_log_id DESC
          LIMIT 1`,
-        [mas_ser_id, mas_cat_id, phone]
+        [mas_ser_id, mas_cat_id, phone],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -2968,15 +3217,17 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
           : existing.api_response;
 
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* ================= FRESH FLOW ================= */
-    else {
-
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/individual/fetch-national-ids",
         {
@@ -2994,7 +3245,7 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -3013,7 +3264,7 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      await connection.query(
+      const [fetchInsert] = await connection.query(
         `INSERT INTO service_data_fetch_log
          (mas_ser_id, mas_cat_id, file_number,
           mobile_number, name, pan_number,
@@ -3031,21 +3282,23 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
 
-    /* ================= WALLET ================= */
-    if (shouldDeduct) {
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+    /* ================= WALLET DEDUCTION ================= */
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
@@ -3054,34 +3307,36 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
           opening_balance, closing_balance,
           reference_type, created_by)
          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-        [userId, creditsUsed, openingBalance, closingBalance, userId]
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
       `INSERT INTO user_service_logs
-       (users_id, usr_ser_id, file_no, credits_used,
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
         api_name, api_status,
         wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "NATIONAL_IDS_BY_PHONE",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -3090,7 +3345,6 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE NATIONAL IDS ERROR:", err.message);
@@ -3099,9 +3353,6 @@ export const executeNationalIdsByPhoneController = async (req, res) => {
     connection.release();
   }
 };
-
-
-
 
 export const checkPanByPhoneCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -3121,7 +3372,7 @@ export const checkPanByPhoneCacheController = async (req, res) => {
          AND mobile_number = ?
        ORDER BY ser_fet_log_id DESC
        LIMIT 1`,
-      [mas_ser_id, mas_cat_id, phone]
+      [mas_ser_id, mas_cat_id, phone],
     );
 
     if (!existing) {
@@ -3136,7 +3387,6 @@ export const checkPanByPhoneCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkPanByPhoneCache error:", err.message);
     return res.status(500).json({ success: false });
@@ -3144,6 +3394,7 @@ export const checkPanByPhoneCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executePanByPhoneController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -3178,25 +3429,28 @@ export const executePanByPhoneController = async (req, res) => {
          AND users_id = ?
          AND status = 'active'
        FOR UPDATE`,
-      [usr_ser_id, userId]
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
 
     const creditsUsed = Number(service.actual_credits);
 
-    /* ================= WALLET LOCK ================= */
+    /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
       `SELECT wallet_amount
        FROM users
        WHERE users_id = ?
        FOR UPDATE`,
-      [userId]
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ phone, first_name, last_name });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -3204,10 +3458,9 @@ export const executePanByPhoneController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       CACHE FLOW
-    ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
         `SELECT *
@@ -3217,7 +3470,7 @@ export const executePanByPhoneController = async (req, res) => {
            AND mobile_number = ?
          ORDER BY ser_fet_log_id DESC
          LIMIT 1`,
-        [mas_ser_id, mas_cat_id, phone]
+        [mas_ser_id, mas_cat_id, phone],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -3228,16 +3481,17 @@ export const executePanByPhoneController = async (req, res) => {
           : existing.api_response;
 
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       FRESH GRIDLINES CALL
-    ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/individual/fetch-pan",
         {
@@ -3254,7 +3508,7 @@ export const executePanByPhoneController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -3272,13 +3526,12 @@ export const executePanByPhoneController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      /* ================= INSERT FETCH LOG ================= */
-      await connection.query(
+      const [fetchInsert] = await connection.query(
         `INSERT INTO service_data_fetch_log
-        (mas_ser_id, mas_cat_id, file_number,
-         mobile_number, first_name,
-         api_response, response_status,
-         http_status_code, created_by)
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, first_name,
+          api_response, response_status,
+          http_status_code, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
@@ -3290,21 +3543,23 @@ export const executePanByPhoneController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
-        `UPDATE users SET wallet_amount = ?
-         WHERE users_id = ?`,
-        [closingBalance, userId]
+        `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
@@ -3313,37 +3568,35 @@ export const executePanByPhoneController = async (req, res) => {
           opening_balance, closing_balance,
           reference_type, created_by)
          VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
       `INSERT INTO user_service_logs
-       (users_id, usr_ser_id, file_no, credits_used,
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
         api_name, api_status, wallet_transaction_id,
-        transaction_id, request_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "PAN_BY_PHONE",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -3352,7 +3605,6 @@ export const executePanByPhoneController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE PAN BY PHONE ERROR:", err.message);
@@ -3365,9 +3617,6 @@ export const executePanByPhoneController = async (req, res) => {
     connection.release();
   }
 };
-
-
-
 
 export const checkPersonalProfileCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -3385,7 +3634,7 @@ export const checkPersonalProfileCacheController = async (req, res) => {
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, phone]
+      [mas_ser_id, mas_cat_id, phone],
     );
 
     if (!existing) {
@@ -3407,6 +3656,7 @@ export const checkPersonalProfileCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executePersonalProfileController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -3429,15 +3679,13 @@ export const executePersonalProfileController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -3446,18 +3694,19 @@ export const executePersonalProfileController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ phone, first_name, last_name, pan });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -3465,22 +3714,19 @@ export const executePersonalProfileController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-       ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, phone]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, phone],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -3491,16 +3737,17 @@ export const executePersonalProfileController = async (req, res) => {
           : existing.api_response;
 
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       ================= FRESH FLOW ========================
-       ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/individual/fetch-personal-profile",
         {
@@ -3508,8 +3755,7 @@ export const executePersonalProfileController = async (req, res) => {
           first_name,
           last_name,
           pan,
-          consent_text:
-            "I provide consent to fetch information.",
+          consent_text: "I provide consent to fetch information.",
           consent: "Y",
         },
         {
@@ -3519,7 +3765,7 @@ export const executePersonalProfileController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -3537,23 +3783,13 @@ export const executePersonalProfileController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      /* ================= INSERT FETCH LOG ================= */
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          first_name,
-          pan_number,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, first_name, pan_number,
+          api_response, response_status,
+          http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -3565,76 +3801,60 @@ export const executePersonalProfileController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "PERSONAL_PROFILE",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -3656,11 +3876,6 @@ export const executePersonalProfileController = async (req, res) => {
   }
 };
 
-
-
-
-
-
 export const checkMobileAgeCacheController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -3677,7 +3892,7 @@ export const checkMobileAgeCacheController = async (req, res) => {
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, mobile_number]
+      [mas_ser_id, mas_cat_id, mobile_number],
     );
 
     if (!existing) {
@@ -3692,7 +3907,6 @@ export const checkMobileAgeCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkMobileAgeCache error:", err.message);
     return res.status(500).json({ success: false });
@@ -3700,6 +3914,7 @@ export const checkMobileAgeCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeMobileAgeController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -3719,15 +3934,13 @@ export const executeMobileAgeController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -3736,18 +3949,19 @@ export const executeMobileAgeController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ mobile_number });
 
     let fullResponse;
     let apiStatus = "FAILED";
@@ -3755,22 +3969,19 @@ export const executeMobileAgeController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-       ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, mobile_number]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, mobile_number],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -3781,16 +3992,17 @@ export const executeMobileAgeController = async (req, res) => {
           : existing.api_response;
 
       apiStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (apiStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       ================= FRESH FLOW ========================
-       ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/mobile/number-age",
         {
@@ -3804,7 +4016,7 @@ export const executeMobileAgeController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -3814,29 +4026,20 @@ export const executeMobileAgeController = async (req, res) => {
       requestId = fullResponse?.request_id || null;
 
       if (code === "1008") {
-  apiStatus = "success";
-  shouldDeduct = true;
-} else if (code === "1004") {
-  apiStatus = "not_found";
-} else {
-  apiStatus = "failed";
-}
+        apiStatus = "success";
+        shouldDeduct = true;
+      } else if (code === "1004") {
+        apiStatus = "not_found";
+      } else {
+        apiStatus = "failed";
+      }
 
-      /* ================= INSERT FETCH LOG ================= */
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -3846,76 +4049,60 @@ export const executeMobileAgeController = async (req, res) => {
           apiStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "MOBILE_NUMBER_AGE",
         apiStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -3924,7 +4111,6 @@ export const executeMobileAgeController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE MOBILE AGE ERROR:", err.message);
@@ -3937,10 +4123,6 @@ export const executeMobileAgeController = async (req, res) => {
     connection.release();
   }
 };
-
-
-
-
 
 export const checkMobileLookupCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -3958,7 +4140,7 @@ export const checkMobileLookupCacheController = async (req, res) => {
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, mobile_number]
+      [mas_ser_id, mas_cat_id, mobile_number],
     );
 
     if (!existing) {
@@ -3973,7 +4155,6 @@ export const checkMobileLookupCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkMobileLookupCache error:", err.message);
     return res.status(500).json({ success: false });
@@ -3981,6 +4162,7 @@ export const checkMobileLookupCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeMobileLookupController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -4000,15 +4182,13 @@ export const executeMobileLookupController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -4017,18 +4197,19 @@ export const executeMobileLookupController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ mobile_number });
 
     let fullResponse;
     let apiStatus = "FAILED";
@@ -4036,22 +4217,19 @@ export const executeMobileLookupController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-       ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, mobile_number]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, mobile_number],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -4062,16 +4240,17 @@ export const executeMobileLookupController = async (req, res) => {
           : existing.api_response;
 
       apiStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (apiStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       ================= FRESH FLOW ========================
-       ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/telco/mobile-lookup",
         {
@@ -4085,7 +4264,7 @@ export const executeMobileLookupController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -4094,30 +4273,21 @@ export const executeMobileLookupController = async (req, res) => {
       transactionId = fullResponse?.transaction_id || null;
       requestId = fullResponse?.request_id || null;
 
-    if (code === "1007") {
-  apiStatus = "success";
-  shouldDeduct = true;
-} else if (code === "1004") {
-  apiStatus = "not_found";
-} else {
-  apiStatus = "failed";
-}
+      if (code === "1007") {
+        apiStatus = "success";
+        shouldDeduct = true;
+      } else if (code === "1004") {
+        apiStatus = "not_found";
+      } else {
+        apiStatus = "failed";
+      }
 
-      /* ================= INSERT FETCH LOG ================= */
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -4127,76 +4297,60 @@ export const executeMobileLookupController = async (req, res) => {
           apiStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "MOBILE_LOOKUP",
         apiStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -4205,7 +4359,6 @@ export const executeMobileLookupController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE MOBILE LOOKUP ERROR:", err.message);
@@ -4218,10 +4371,6 @@ export const executeMobileLookupController = async (req, res) => {
     connection.release();
   }
 };
-
-
-
-
 
 export const checkMobilePrefillCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -4236,10 +4385,11 @@ export const checkMobilePrefillCacheController = async (req, res) => {
       WHERE mas_ser_id = ?
         AND mas_cat_id = ?
         AND mobile_number = ?
+        AND api_name = 'MOBILE_PREFILL'
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, mobile_number]
+      [mas_ser_id, mas_cat_id, mobile_number],
     );
 
     if (!existing) {
@@ -4254,7 +4404,6 @@ export const checkMobilePrefillCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkMobilePrefillCache error:", err.message);
     return res.status(500).json({ success: false });
@@ -4262,6 +4411,7 @@ export const checkMobilePrefillCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeMobilePrefillController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -4283,15 +4433,13 @@ export const executeMobilePrefillController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -4300,18 +4448,23 @@ export const executeMobilePrefillController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({
+      mobile_number,
+      first_name,
+      last_name,
+    });
 
     let fullResponse;
     let apiStatus = "failed";
@@ -4319,22 +4472,19 @@ export const executeMobilePrefillController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* =====================================================
-       ================= CACHE FLOW ========================
-       ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, mobile_number]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, mobile_number],
       );
 
       if (!existing) throw new Error("Cache not found");
@@ -4345,16 +4495,17 @@ export const executeMobilePrefillController = async (req, res) => {
           : existing.api_response;
 
       apiStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (apiStatus === "success") {
         shouldDeduct = true;
       }
-    }
 
-    /* =====================================================
-       ================= FRESH FLOW ========================
-       ===================================================== */
-    else {
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/mobile/prefill",
         {
@@ -4370,7 +4521,7 @@ export const executeMobilePrefillController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
@@ -4388,22 +4539,13 @@ export const executeMobilePrefillController = async (req, res) => {
         apiStatus = "failed";
       }
 
-      /* ================= INSERT FETCH LOG ================= */
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          first_name,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, first_name,
+          api_response, response_status,
+          http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -4414,76 +4556,60 @@ export const executeMobilePrefillController = async (req, res) => {
           apiStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "MOBILE_PREFILL",
         apiStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -4492,7 +4618,6 @@ export const executeMobilePrefillController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
     await connection.rollback();
     console.error("❌ EXECUTE MOBILE PREFILL ERROR:", err.message);
@@ -4505,9 +4630,6 @@ export const executeMobilePrefillController = async (req, res) => {
     connection.release();
   }
 };
-
-
-
 
 export const checkMobileNameLookupCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -4525,7 +4647,7 @@ export const checkMobileNameLookupCacheController = async (req, res) => {
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, mobile_number]
+      [mas_ser_id, mas_cat_id, mobile_number],
     );
 
     if (!existing) {
@@ -4540,7 +4662,6 @@ export const checkMobileNameLookupCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkMobileNameLookupCache error:", err.message);
     return res.status(500).json({ success: false });
@@ -4548,6 +4669,7 @@ export const checkMobileNameLookupCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executeMobileNameLookupController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -4567,15 +4689,13 @@ export const executeMobileNameLookupController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -4584,18 +4704,19 @@ export const executeMobileNameLookupController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
     if (!user) throw new Error("User not found");
 
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ mobile_number });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -4603,41 +4724,40 @@ export const executeMobileNameLookupController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* ===================================================== */
-    /* ===================== CACHE FLOW ===================== */
-    /* ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
-
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, mobile_number]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, mobile_number],
       );
 
       if (!existing) throw new Error("Cache not found");
 
-      fullResponse = (existing.api_response);
+      fullResponse =
+        typeof existing.api_response === "string"
+          ? JSON.parse(existing.api_response)
+          : existing.api_response;
+
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
 
-    }
-
-    /* ===================================================== */
-    /* ===================== FRESH FLOW ===================== */
-    /* ===================================================== */
-    else {
-
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/mobile/name-lookup",
         {
@@ -4651,17 +4771,15 @@ export const executeMobileNameLookupController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
 
       const code = fullResponse?.data?.code;
-
       transactionId = fullResponse?.transaction_id || null;
       requestId = fullResponse?.request_id || null;
 
-      /* ===== API STATUS HANDLING (LOWERCASE) ===== */
       if (code === "1014") {
         responseStatus = "success";
         shouldDeduct = true;
@@ -4671,21 +4789,12 @@ export const executeMobileNameLookupController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      /* ===== SAVE FETCH LOG ===== */
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -4695,81 +4804,60 @@ export const executeMobileNameLookupController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
-        `
-        UPDATE users
-        SET wallet_amount = ?
-        WHERE users_id = ?
-        `,
-        [closingBalance, userId]
+        `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [
-          userId,
-          creditsUsed,
-          openingBalance,
-          closingBalance,
-          userId,
-        ]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "MOBILE_NAME_LOOKUP",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -4778,26 +4866,18 @@ export const executeMobileNameLookupController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
-
     await connection.rollback();
-
     console.error("❌ EXECUTE MOBILE NAME LOOKUP ERROR:", err.message);
 
     return res.status(500).json({
       success: false,
       message: err.message,
     });
-
   } finally {
     connection.release();
   }
 };
-
-
-
-
 
 export const checkPanLookupByMobileCacheController = async (req, res) => {
   const connection = await db.getConnection();
@@ -4812,10 +4892,11 @@ export const checkPanLookupByMobileCacheController = async (req, res) => {
       WHERE mas_ser_id = ?
         AND mas_cat_id = ?
         AND mobile_number = ?
+        AND api_name = 'PAN_LOOKUP_BY_MOBILE'
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
-      [mas_ser_id, mas_cat_id, mobile_number]
+      [mas_ser_id, mas_cat_id, mobile_number],
     );
 
     if (!existing) {
@@ -4830,7 +4911,6 @@ export const checkPanLookupByMobileCacheController = async (req, res) => {
     }
 
     return res.json({ hasCache: false });
-
   } catch (err) {
     console.error("❌ checkPanLookup cache error:", err.message);
     return res.status(500).json({ success: false });
@@ -4838,6 +4918,7 @@ export const checkPanLookupByMobileCacheController = async (req, res) => {
     connection.release();
   }
 };
+
 export const executePanLookupByMobileController = async (req, res) => {
   const connection = await db.getConnection();
 
@@ -4857,15 +4938,13 @@ export const executePanLookupByMobileController = async (req, res) => {
 
     /* ================= SERVICE CHECK ================= */
     const [[service]] = await connection.query(
-      `
-      SELECT actual_credits
-      FROM user_services
-      WHERE usr_ser_id = ?
-        AND users_id = ?
-        AND status = 'active'
-      FOR UPDATE
-      `,
-      [usr_ser_id, userId]
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id = ?
+         AND users_id = ?
+         AND status = 'active'
+       FOR UPDATE`,
+      [usr_ser_id, userId],
     );
 
     if (!service) throw new Error("Service not allowed");
@@ -4874,16 +4953,19 @@ export const executePanLookupByMobileController = async (req, res) => {
 
     /* ================= WALLET CHECK ================= */
     const [[user]] = await connection.query(
-      `
-      SELECT wallet_amount
-      FROM users
-      WHERE users_id = ?
-      FOR UPDATE
-      `,
-      [userId]
+      `SELECT wallet_amount
+       FROM users
+       WHERE users_id = ?
+       FOR UPDATE`,
+      [userId],
     );
 
+    if (!user) throw new Error("User not found");
+
     const openingBalance = Number(user.wallet_amount);
+
+    /* ================= PREPARE INPUT PAYLOAD ================= */
+    const inputPayload = JSON.stringify({ mobile_number });
 
     let fullResponse;
     let responseStatus = "failed";
@@ -4891,41 +4973,40 @@ export const executePanLookupByMobileController = async (req, res) => {
     let walletTransactionId = null;
     let transactionId = null;
     let requestId = null;
+    let serFetLogId = null;
 
-    /* ===================================================== */
-    /* ===================== CACHE FLOW ===================== */
-    /* ===================================================== */
+    /* ================= CACHE FLOW ================= */
     if (use_cache) {
-
       const [[existing]] = await connection.query(
-        `
-        SELECT *
-        FROM service_data_fetch_log
-        WHERE mas_ser_id = ?
-          AND mas_cat_id = ?
-          AND mobile_number = ?
-        ORDER BY ser_fet_log_id DESC
-        LIMIT 1
-        `,
-        [mas_ser_id, mas_cat_id, mobile_number]
+        `SELECT *
+         FROM service_data_fetch_log
+         WHERE mas_ser_id = ?
+           AND mas_cat_id = ?
+           AND mobile_number = ?
+         ORDER BY ser_fet_log_id DESC
+         LIMIT 1`,
+        [mas_ser_id, mas_cat_id, mobile_number],
       );
 
       if (!existing) throw new Error("Cache not found");
 
-      fullResponse = (existing.api_response);
+      fullResponse =
+        typeof existing.api_response === "string"
+          ? JSON.parse(existing.api_response)
+          : existing.api_response;
+
       responseStatus = existing.response_status;
+      serFetLogId = existing.ser_fet_log_id;
+
+      transactionId = fullResponse?.transaction_id || null;
+      requestId = fullResponse?.request_id || null;
 
       if (responseStatus === "success") {
         shouldDeduct = true;
       }
 
-    }
-
-    /* ===================================================== */
-    /* ===================== FRESH FLOW ===================== */
-    /* ===================================================== */
-    else {
-
+      /* ================= FRESH API CALL ================= */
+    } else {
       const apiRes = await axios.post(
         "https://api.gridlines.io/profile-api/mobile/pan-lookup",
         {
@@ -4939,13 +5020,12 @@ export const executePanLookupByMobileController = async (req, res) => {
             "Content-Type": "application/json",
           },
           validateStatus: () => true,
-        }
+        },
       );
 
       fullResponse = apiRes.data;
 
       const code = fullResponse?.data?.code;
-
       transactionId = fullResponse?.transaction_id || null;
       requestId = fullResponse?.request_id || null;
 
@@ -4958,20 +5038,12 @@ export const executePanLookupByMobileController = async (req, res) => {
         responseStatus = "failed";
       }
 
-      await connection.query(
-        `
-        INSERT INTO service_data_fetch_log (
-          mas_ser_id,
-          mas_cat_id,
-          file_number,
-          mobile_number,
-          api_response,
-          response_status,
-          http_status_code,
-          created_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `,
+      const [fetchInsert] = await connection.query(
+        `INSERT INTO service_data_fetch_log
+         (mas_ser_id, mas_cat_id, file_number,
+          mobile_number, api_response,
+          response_status, http_status_code, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mas_ser_id,
           mas_cat_id,
@@ -4981,71 +5053,60 @@ export const executePanLookupByMobileController = async (req, res) => {
           responseStatus,
           apiRes.status,
           userId,
-        ]
+        ],
       );
+
+      serFetLogId = fetchInsert.insertId;
     }
+
+    if (!serFetLogId) throw new Error("ser_fet_log_id not found");
 
     /* ================= WALLET DEDUCTION ================= */
     if (shouldDeduct) {
-
-      if (openingBalance < creditsUsed)
-        throw new Error("Insufficient balance");
+      if (openingBalance < creditsUsed) throw new Error("Insufficient balance");
 
       const closingBalance = openingBalance - creditsUsed;
 
       await connection.query(
         `UPDATE users SET wallet_amount = ? WHERE users_id = ?`,
-        [closingBalance, userId]
+        [closingBalance, userId],
       );
 
       const [walletTxn] = await connection.query(
-        `
-        INSERT INTO wallet_transactions (
-          users_id,
-          transaction_type,
-          amount,
-          opening_balance,
-          closing_balance,
-          reference_type,
-          created_by
-        )
-        VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)
-        `,
-        [userId, creditsUsed, openingBalance, closingBalance, userId]
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId],
       );
 
       walletTransactionId = walletTxn.insertId;
     }
 
-    /* ================= USER SERVICE LOG ================= */
+    /* ================= SERVICE LOG ================= */
     await connection.query(
-      `
-      INSERT INTO user_service_logs (
-        users_id,
-        usr_ser_id,
-        file_no,
-        credits_used,
-        api_name,
-        api_status,
-        wallet_transaction_id,
-        transaction_id,
-        request_id,
-        created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        input_payload, credits_used,
+        api_name, api_status, wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         usr_ser_id,
         file_no,
+        inputPayload,
         shouldDeduct ? creditsUsed : 0,
         "PAN_LOOKUP_BY_MOBILE",
         responseStatus,
         walletTransactionId,
         transactionId,
         requestId,
+        serFetLogId,
         userId,
-      ]
+      ],
     );
 
     await connection.commit();
@@ -5054,9 +5115,7 @@ export const executePanLookupByMobileController = async (req, res) => {
       success: true,
       data: fullResponse,
     });
-
   } catch (err) {
-
     await connection.rollback();
     console.error("❌ EXECUTE PAN LOOKUP ERROR:", err.message);
 
@@ -5064,7 +5123,6 @@ export const executePanLookupByMobileController = async (req, res) => {
       success: false,
       message: err.message,
     });
-
   } finally {
     connection.release();
   }

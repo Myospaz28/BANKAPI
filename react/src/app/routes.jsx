@@ -39,6 +39,8 @@ import facematch_verifyRoutes from "./facematch/facematch_verifyRoutes";
 import aadhar_verifyRoutes from "./aadhar/aadhar_verifyRoutes";
 import bank_ccrvRoutes from "./bank_ccrm/bank_ccrvRoutes";
 import LayoutWithAutoLogout from "./services/LayoutWithAutoLogout";
+import all_in_one_mobile from "./all_in_one/all_in_one_mobile";
+
 
 
 
@@ -74,6 +76,7 @@ export const protectedRoutes = [
   ...facematch_verifyRoutes,
   ...aadhar_verifyRoutes,
   ...bank_ccrvRoutes,
+  ...all_in_one_mobile,
 ];
 
 
