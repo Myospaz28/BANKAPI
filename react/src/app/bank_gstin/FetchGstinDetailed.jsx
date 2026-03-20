@@ -302,6 +302,8 @@
 //     </Row>
 //   );
 // }
+
+
 import React, { useEffect, useState } from "react";
 import {
   Card,
@@ -443,7 +445,6 @@ export default function FetchGstinDetailed() {
 
       const apiData = normalizeResult(executeRes.data?.data);
       const code = apiData?.data?.code;
-
       setResult(apiData);
 
       if (code === "1000") {
@@ -472,7 +473,7 @@ export default function FetchGstinDetailed() {
   };
 
   /* ================= EXPORT PDF ================= */
- const exportPdf = () => {
+ const exportPdf1 = () => {
   if (!result) return;
 
   const transactionId = result?.transaction_id || "-";
@@ -669,7 +670,151 @@ export default function FetchGstinDetailed() {
 
   pdfMake.createPdf(doc).download(`GSTIN_DETAILED_${fileNo}.pdf`);
 };
+const exportPdf = () => {
+  if (!result) return;
 
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : v;
+
+  /* ================= RECURSIVE JSON BUILDER ================= */
+  const buildContent = (obj, title = null) => {
+    let content = [];
+
+    if (title) {
+      content.push({
+        text: title,
+        style: "section",
+        margin: [0, 12, 0, 6],
+      });
+    }
+
+    Object.entries(obj || {}).forEach(([key, value]) => {
+      const label = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+
+      /* ===== ARRAY ===== */
+      if (Array.isArray(value)) {
+        if (!value.length) return;
+
+        /* array of object → table */
+        if (typeof value[0] === "object") {
+          const headers = Object.keys(value[0]);
+
+          content.push({
+            text: label,
+            bold: true,
+            margin: [0, 6, 0, 3],
+          });
+
+          content.push({
+            table: {
+              headerRows: 1,
+              widths: headers.map(() => "*"),
+              body: [
+                headers.map((h) => ({
+                  text: h
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase()),
+                  bold: true,
+                })),
+                ...value.map((row) =>
+                  headers.map((h) => safe(row[h]))
+                ),
+              ],
+            },
+            layout: "lightHorizontalLines",
+          });
+        } else {
+          /* simple array → bullet */
+          content.push({
+            text: label,
+            bold: true,
+            margin: [0, 6, 0, 3],
+          });
+
+          content.push({
+            ul: value.map((v) => safe(v)),
+          });
+        }
+      }
+
+      /* ===== OBJECT ===== */
+      else if (typeof value === "object" && value !== null) {
+        content = content.concat(buildContent(value, label));
+      }
+
+      /* ===== PRIMITIVE ===== */
+      else {
+        content.push({
+          table: {
+            widths: ["40%", "60%"],
+            body: [
+              [
+                { text: label, bold: true },
+                safe(value),
+              ],
+            ],
+          },
+          layout: "noBorders",
+        });
+      }
+    });
+
+    return content;
+  };
+
+  const doc = {
+    content: [
+      { text: "GSTIN Detailed Report", style: "header" },
+
+      {
+        text: `File No: ${fileNo}`,
+        margin: [0, 5],
+      },
+      {
+        text: `GSTIN: ${gstin}`,
+        margin: [0, 2],
+      },
+      {
+        text: `Transaction ID: ${result?.transaction_id || "-"}`,
+      },
+      {
+        text: `Request ID: ${result?.request_id || "-"}`,
+        margin: [0, 0, 0, 10],
+      },
+
+      { qr: result?.transaction_id || "-", fit: 80, alignment: "right" },
+
+      /* ⭐ FULL DATA */
+      ...buildContent(result?.data?.gstin_data, "GSTIN Data"),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+      },
+      section: {
+        fontSize: 14,
+        bold: true,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 9,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`GSTIN_DETAILED_${fileNo}.pdf`);
+};
 
   const code = result?.data?.code;
 

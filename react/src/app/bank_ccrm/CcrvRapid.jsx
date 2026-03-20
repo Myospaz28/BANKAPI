@@ -635,6 +635,534 @@
 
 
 
+// import React, { useEffect, useState } from "react";
+// import {
+//   Card,
+//   Row,
+//   Col,
+//   Form,
+//   Button,
+//   Spinner,
+//   Badge
+// } from "react-bootstrap";
+// import { useLocation, useNavigate } from "react-router-dom";
+// import swal from "sweetalert2";
+// import api from "../services/api";
+// import JsonTableViewer from "app/components/JsonTableViewer";
+
+// import pdfMake from "pdfmake/build/pdfmake";
+// import pdfFonts from "pdfmake/build/vfs_fonts";
+// pdfMake.vfs = pdfFonts.vfs;
+
+// const Required = () => (
+//   <span style={{ color: "red", marginLeft: 4 }}>*</span>
+// );
+
+// export default function FetchCcrvRapid() {
+
+//   const navigate = useNavigate();
+//   const { state } = useLocation();
+
+//   const {
+//     usr_ser_id,
+//     mas_ser_id,
+//     mas_cat_id,
+//     service_name,
+//     credits
+//   } = state || {};
+
+//   const [fileNo, setFileNo] = useState("");
+//   const [name, setName] = useState("");
+//   const [fatherName, setFatherName] = useState("");
+//   const [address, setAddress] = useState("");
+//   const [dob, setDob] = useState("");
+//   const [consent, setConsent] = useState(false);
+
+//   const [loading, setLoading] = useState(false);
+//   const [transactionId, setTransactionId] = useState(null);
+//   const [status, setStatus] = useState(null);
+//   const [result, setResult] = useState(null);
+
+//   /* ================= RESUME TRANSACTION ================= */
+
+//   useEffect(() => {
+
+//     if (!usr_ser_id) navigate(-1);
+
+//   const savedTxn = localStorage.getItem("ccrv_txn");
+
+// if (savedTxn) {
+
+//   const parsed = JSON.parse(savedTxn);
+
+//   const age = Date.now() - parsed.createdAt;
+
+//   // expire after 24 hours
+//   const MAX_AGE = 24 * 60 * 60 * 1000;
+
+//   if (age > MAX_AGE) {
+
+//     console.log("⚠️ Old transaction cleared");
+
+//     localStorage.removeItem("ccrv_txn");
+
+//   } else {
+
+//     checkStatus(parsed.txnId);
+
+//   }
+
+// }
+
+//   }, []);
+
+//   /* ================= CHECK STATUS FROM DB ================= */
+
+// const checkStatus = async (txnId) => {
+
+//   try {
+
+//     const res = await api.get(`api/getCcrvResult/${txnId}`);
+
+//     if (res.data.status === "not_found") {
+
+//       localStorage.removeItem("ccrv_txn");
+//       setTransactionId(null);
+//       setStatus(null);
+//       return;
+
+//     }
+
+//     if (res.data.status === "processing") {
+
+//       setTransactionId(txnId);
+//       setStatus("IN_PROGRESS");
+
+//     }
+
+//     if (res.data.status === "completed") {
+
+//       setTransactionId(txnId);
+//       setStatus("COMPLETED");
+//       setResult(res.data.data);
+
+//       localStorage.removeItem("ccrv_txn");
+
+//     }
+
+//   } catch {
+
+//     localStorage.removeItem("ccrv_txn");
+
+//   }
+
+// };
+
+//   /* ================= MANUAL REFRESH ================= */
+
+//   const handleRefresh = async () => {
+
+//     if (!transactionId) return;
+
+//     try {
+
+//       const res = await api.get(
+//         `api/getCcrvResult/${transactionId}`
+//       );
+
+//       if (res.data.status === "processing") {
+
+//         setStatus("IN_PROGRESS");
+
+//         swal.fire(
+//           "Still Processing",
+//           "Result not ready yet",
+//           "info"
+//         );
+
+//       }
+//       else if (res.data.status === "completed") {
+
+//         setStatus("COMPLETED");
+//         setResult(res.data.data);
+
+//         localStorage.removeItem("ccrv_txn");
+
+//         swal.fire(
+//           "Completed",
+//           "CCRV result received",
+//           "success"
+//         );
+
+//       }
+
+//     } catch {
+
+//       swal.fire(
+//         "Error",
+//         "Unable to fetch result",
+//         "error"
+//       );
+
+//     }
+
+//   };
+
+//   /* ================= FETCH SEARCH ================= */
+
+//   const handleFetch = async () => {
+
+//     if (!fileNo || !name || !consent) {
+
+//       swal.fire({
+//         title: "Validation Error",
+//         html: `
+//           <ul style="text-align:left">
+//             ${!fileNo ? "<li>File Number is required</li>" : ""}
+//             ${!name ? "<li>Name is required</li>" : ""}
+//             ${!consent ? "<li>Consent is required</li>" : ""}
+//           </ul>
+//         `,
+//         icon: "warning"
+//       });
+
+//       return;
+//     }
+
+//     const confirm = await swal.fire({
+//       title: "Confirm CCRV Rapid Search",
+//       html: `
+//         <p><b>Name:</b> ${name}</p>
+//         <p><b>File Number:</b> ${fileNo}</p>
+//       `,
+//       icon: "question",
+//       showCancelButton: true,
+//       confirmButtonText: "Proceed"
+//     });
+
+//     if (!confirm.isConfirmed) return;
+
+//     setLoading(true);
+//     setResult(null);
+
+//     try {
+
+//       /* ================= CACHE CHECK ================= */
+
+//      /* ================= CACHE CHECK ================= */
+
+// const cacheRes = await api.post(
+//   "api/checkCcrvRapidCache",
+//   { mas_ser_id, mas_cat_id, name, dob }
+// );
+
+// /* ================= PROCESSING CHECK ================= */
+
+// if (cacheRes.data.status === "processing") {
+
+//   const txnId = cacheRes.data.transaction_id;
+
+//   setTransactionId(txnId);
+//   setStatus("IN_PROGRESS");
+
+//   localStorage.setItem(
+//   "ccrv_txn",
+//   JSON.stringify({
+//     txnId,
+//     createdAt: Date.now()
+//   })
+// );
+
+//   swal.fire(
+//     "Search Already Running",
+//     "This record is already being processed. You can refresh the status.",
+//     "info"
+//   );
+
+//   setLoading(false);
+//   return;
+// }
+
+//       let useCache = false;
+
+//       if (cacheRes.data.hasCache) {
+
+//         const fetchedDate = new Date(
+//           cacheRes.data.lastFetchedAt
+//         ).toLocaleString("en-IN");
+
+//         const cacheConfirm = await swal.fire({
+//           title: "Previous Data Found",
+//           html: `Last fetched on <b>${fetchedDate}</b>`,
+//           icon: "question",
+//           showCancelButton: true,
+//           showDenyButton: true,
+//           confirmButtonText: "Use Old Data",
+//           denyButtonText: "Fetch Fresh"
+//         });
+
+//         if (cacheConfirm.isConfirmed) useCache = true;
+//         else if (!cacheConfirm.isDenied) {
+//           setLoading(false);
+//           return;
+//         }
+//       }
+
+//       /* ================= EXECUTE SEARCH ================= */
+
+//       const res = await api.post("api/executeCcrvRapid", {
+//         usr_ser_id,
+//         mas_ser_id,
+//         mas_cat_id,
+//         file_no: fileNo,
+//         name,
+//         father_name: fatherName,
+//         address,
+//         dob,
+//         use_cache: useCache
+//       });
+
+//       const txnId = res.data?.data?.data?.transaction_id;
+
+//       if (txnId) {
+
+//         setTransactionId(txnId);
+//         setStatus("IN_PROGRESS");
+
+//         localStorage.setItem("ccrv_txn", txnId);
+
+//         swal.fire(
+//           "Search Started",
+//           "CCRV search initiated",
+//           "success"
+//         );
+
+//       }
+
+//     } catch {
+
+//       swal.fire(
+//         "Service Unavailable",
+//         "Please try again later",
+//         "error"
+//       );
+
+//     } finally {
+
+//       setLoading(false);
+
+//     }
+
+//   };
+
+//   /* ================= RESET ================= */
+
+//   const resetRequest = () => {
+
+//     localStorage.removeItem("ccrv_txn");
+
+//     setTransactionId(null);
+//     setStatus(null);
+//     setResult(null);
+
+//   };
+
+//   /* ================= EXPORT PDF ================= */
+
+//   const exportPdf = () => {
+
+//     if (!result) return;
+
+//     pdfMake.createPdf({
+
+//       content: [
+
+//         { text: "CCRV Rapid Report", style: "header" },
+
+//         { text: `File Number: ${fileNo}`, margin: [0, 10] },
+
+//         {
+//           table: {
+//             widths: ["20%", "20%", "20%", "20%", "20%"],
+//             body: [
+//               ["Case No", "Type", "Category", "Status", "Decision Date"],
+//               ...(result.cases || []).map((c) => [
+//                 c.case_number || "-",
+//                 c.case_type || "-",
+//                 c.case_category || "-",
+//                 c.case_status || "-",
+//                 c.case_decision_date || "-"
+//               ])
+//             ]
+//           }
+//         }
+
+//       ],
+
+//       styles: { header: { fontSize: 18, bold: true } }
+
+//     }).download(`CCRV_${fileNo}.pdf`);
+
+//   };
+
+//   const getBadgeVariant = () => {
+
+//     if (status === "COMPLETED") return "success";
+//     if (status === "IN_PROGRESS") return "warning";
+//     return "secondary";
+
+//   };
+
+//   return (
+//     <Row>
+
+//       <Col md={12}>
+
+//         <Card body className="mb-3">
+
+//           <Button onClick={() => navigate(-1)}>← Back</Button>
+
+//           <h4 className="mt-3">{service_name}</h4>
+
+//           <p>Credits Required: <b>{credits}</b></p>
+
+//         </Card>
+
+//         <Card body className="mb-4">
+
+//           <Row>
+
+//             <Col md={4}>
+//               <Form.Label>File Number <Required/></Form.Label>
+//               <Form.Control
+//                 value={fileNo}
+//                 onChange={(e)=>setFileNo(e.target.value)}
+//               />
+//             </Col>
+
+//             <Col md={4}>
+//               <Form.Label>Name <Required/></Form.Label>
+//               <Form.Control
+//                 value={name}
+//                 onChange={(e)=>setName(e.target.value)}
+//               />
+//             </Col>
+
+//             <Col md={4}>
+//               <Form.Label>Date of Birth</Form.Label>
+//               <Form.Control
+//                 type="date"
+//                 value={dob}
+//                 onChange={(e)=>setDob(e.target.value)}
+//               />
+//             </Col>
+
+//           </Row>
+
+//           <Row className="mt-3">
+
+//             <Col md={4}>
+//               <Form.Label>Father Name</Form.Label>
+//               <Form.Control
+//                 value={fatherName}
+//                 onChange={(e)=>setFatherName(e.target.value)}
+//               />
+//             </Col>
+
+//             <Col md={8}>
+//               <Form.Label>Address</Form.Label>
+//               <Form.Control
+//                 value={address}
+//                 onChange={(e)=>setAddress(e.target.value)}
+//               />
+//             </Col>
+
+//           </Row>
+
+//           <Form.Check
+//             className="mt-3"
+//             label={<>I give consent <Required/></>}
+//             checked={consent}
+//             onChange={(e)=>setConsent(e.target.checked)}
+//           />
+
+//           <Button
+//             className="mt-3"
+//             disabled={loading}
+//             onClick={handleFetch}
+//           >
+//             {loading ? <Spinner size="sm"/> : "Start CCRV Search"}
+//           </Button>
+
+//         </Card>
+
+//         {transactionId && !result && (
+
+//           <Card body className="mb-3">
+
+//             <h5>
+//               CCRV Request Status{" "}
+//               <Badge bg={getBadgeVariant()}>
+//                 {status}
+//               </Badge>
+//             </h5>
+
+//             <p>Transaction ID: <b>{transactionId}</b></p>
+
+//             <Spinner animation="border" size="sm"/> Processing...
+
+//             <div className="mt-3">
+
+//               <Button
+//                 variant="outline-primary"
+//                 onClick={handleRefresh}
+//               >
+//                 Refresh Status
+//               </Button>
+
+//               <Button
+//                 variant="outline-danger"
+//                 className="ms-2"
+//                 onClick={resetRequest}
+//               >
+//                 Reset
+//               </Button>
+
+//             </div>
+
+//           </Card>
+
+//         )}
+
+//         {result && (
+
+//           <Card body>
+
+//             <div className="d-flex justify-content-between">
+
+//               <h5>CCRV Result</h5>
+
+//               <Button onClick={exportPdf}>
+//                 Export PDF
+//               </Button>
+
+//             </div>
+
+//             <div style={{maxHeight:400,overflow:"auto"}}>
+//               <JsonTableViewer data={result}/>
+//             </div>
+
+//           </Card>
+
+//         )}
+
+//       </Col>
+
+//     </Row>
+//   );
+
+// }
+
 import React, { useEffect, useState } from "react";
 import {
   Card,
@@ -645,14 +1173,11 @@ import {
   Spinner,
   Badge
 } from "react-bootstrap";
+
 import { useLocation, useNavigate } from "react-router-dom";
 import swal from "sweetalert2";
 import api from "../services/api";
 import JsonTableViewer from "app/components/JsonTableViewer";
-
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.vfs;
 
 const Required = () => (
   <span style={{ color: "red", marginLeft: 4 }}>*</span>
@@ -671,64 +1196,85 @@ export default function FetchCcrvRapid() {
     credits
   } = state || {};
 
-  const [fileNo, setFileNo] = useState("");
-  const [name, setName] = useState("");
-  const [fatherName, setFatherName] = useState("");
-  const [address, setAddress] = useState("");
-  const [dob, setDob] = useState("");
-  const [consent, setConsent] = useState(false);
+  const [fileNo,setFileNo] = useState("");
+  const [name,setName] = useState("");
+  const [fatherName,setFatherName] = useState("");
+  const [address,setAddress] = useState("");
+  const [dob,setDob] = useState("");
+  const [consent,setConsent] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [transactionId, setTransactionId] = useState(null);
-  const [status, setStatus] = useState(null);
-  const [result, setResult] = useState(null);
+  const [loading,setLoading] = useState(false);
+
+  const [transactionId,setTransactionId] = useState(null);
+  const [status,setStatus] = useState(null);
+  const [result,setResult] = useState(null);
 
   /* ================= RESUME TRANSACTION ================= */
 
-  useEffect(() => {
+  useEffect(()=>{
 
-    if (!usr_ser_id) navigate(-1);
+    if(!usr_ser_id) navigate(-1);
 
-    const savedTxn = localStorage.getItem("ccrv_txn");
+    const saved = localStorage.getItem("ccrv_txn");
 
-    if (savedTxn) {
-      checkStatus(savedTxn);
+    if(saved){
+
+      const parsed = JSON.parse(saved);
+
+      const age = Date.now() - parsed.createdAt;
+
+      if(age > 24*60*60*1000){
+
+        localStorage.removeItem("ccrv_txn");
+
+      }else{
+
+        setTransactionId(parsed.txnId);
+        setStatus("IN_PROGRESS");
+
+        checkStatus(parsed.txnId);
+
+      }
+
     }
 
-  }, []);
+  },[]);
 
-  /* ================= CHECK STATUS FROM DB ================= */
+  /* ================= RESULT CHECK ================= */
 
-  const checkStatus = async (txnId) => {
+  const checkStatus = async (txnId)=>{
 
-    try {
+    try{
 
-      const res = await api.get(`api/getCcrvResult/${txnId}`);
+      const res = await api.get(
+        `api/getCcrvResult/${txnId}`
+      );
 
-      if (res.data.status === "processing") {
+      if(res.data.status === "processing"){
 
-        setTransactionId(txnId);
         setStatus("IN_PROGRESS");
 
       }
-      else if (res.data.status === "completed") {
 
-        setTransactionId(txnId);
+      if(res.data.status === "completed"){
+
         setStatus("COMPLETED");
+
         setResult(res.data.data);
 
         localStorage.removeItem("ccrv_txn");
 
       }
-      else {
 
-        localStorage.removeItem("ccrv_txn");
+      if(res.data.status === "not_found"){
+
+        resetRequest();
 
       }
 
-    } catch {
+    }catch{
 
-      localStorage.removeItem("ccrv_txn");
+      console.log("Result fetch failed");
 
     }
 
@@ -736,92 +1282,50 @@ export default function FetchCcrvRapid() {
 
   /* ================= MANUAL REFRESH ================= */
 
-  const handleRefresh = async () => {
+  const handleRefresh = async ()=>{
 
-    if (!transactionId) return;
+    if(!transactionId) return;
 
-    try {
-
-      const res = await api.get(
-        `api/getCcrvResult/${transactionId}`
-      );
-
-      if (res.data.status === "processing") {
-
-        setStatus("IN_PROGRESS");
-
-        swal.fire(
-          "Still Processing",
-          "Result not ready yet",
-          "info"
-        );
-
-      }
-      else if (res.data.status === "completed") {
-
-        setStatus("COMPLETED");
-        setResult(res.data.data);
-
-        localStorage.removeItem("ccrv_txn");
-
-        swal.fire(
-          "Completed",
-          "CCRV result received",
-          "success"
-        );
-
-      }
-
-    } catch {
-
-      swal.fire(
-        "Error",
-        "Unable to fetch result",
-        "error"
-      );
-
-    }
+    await checkStatus(transactionId);
 
   };
 
-  /* ================= FETCH SEARCH ================= */
+  /* ================= SEARCH ================= */
 
-  const handleFetch = async () => {
+  const handleFetch = async ()=>{
 
-    if (!fileNo || !name || !consent) {
+    if(!fileNo || !name || !consent){
 
-      swal.fire({
-        title: "Validation Error",
-        html: `
-          <ul style="text-align:left">
-            ${!fileNo ? "<li>File Number is required</li>" : ""}
-            ${!name ? "<li>Name is required</li>" : ""}
-            ${!consent ? "<li>Consent is required</li>" : ""}
-          </ul>
-        `,
-        icon: "warning"
-      });
+      swal.fire(
+        "Validation Error",
+        "Required fields missing",
+        "warning"
+      );
 
       return;
+
     }
 
     const confirm = await swal.fire({
-      title: "Confirm CCRV Rapid Search",
-      html: `
+
+      title:"Confirm CCRV Search",
+
+      html:`
         <p><b>Name:</b> ${name}</p>
         <p><b>File Number:</b> ${fileNo}</p>
       `,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Proceed"
+
+      showCancelButton:true,
+      confirmButtonText:"Proceed"
+
     });
 
-    if (!confirm.isConfirmed) return;
+    if(!confirm.isConfirmed) return;
 
     setLoading(true);
     setResult(null);
 
-    try {
+    try{
 
       /* ================= CACHE CHECK ================= */
 
@@ -830,71 +1334,91 @@ export default function FetchCcrvRapid() {
         { mas_ser_id, mas_cat_id, name, dob }
       );
 
-      let useCache = false;
-
-      if (cacheRes.data.hasCache) {
+      if(cacheRes.data.hasCache){
 
         const fetchedDate = new Date(
           cacheRes.data.lastFetchedAt
         ).toLocaleString("en-IN");
 
         const cacheConfirm = await swal.fire({
-          title: "Previous Data Found",
-          html: `Last fetched on <b>${fetchedDate}</b>`,
-          icon: "question",
-          showCancelButton: true,
-          showDenyButton: true,
-          confirmButtonText: "Use Old Data",
-          denyButtonText: "Fetch Fresh"
+
+          title:"Previous Data Found",
+
+          html:`Last fetched on <b>${fetchedDate}</b>`,
+
+          icon:"question",
+
+          showCancelButton:true,
+
+          showDenyButton:true,
+
+          confirmButtonText:"Use Old Data",
+
+          denyButtonText:"Fetch Fresh"
+
         });
 
-        if (cacheConfirm.isConfirmed) useCache = true;
-        else if (!cacheConfirm.isDenied) {
-          setLoading(false);
+        if(cacheConfirm.isConfirmed){
+
+          setResult(cacheRes.data.data);
+
+          setStatus("COMPLETED");
+
           return;
+
         }
+
       }
 
       /* ================= EXECUTE SEARCH ================= */
 
-      const res = await api.post("api/executeCcrvRapid", {
-        usr_ser_id,
-        mas_ser_id,
-        mas_cat_id,
-        file_no: fileNo,
-        name,
-        father_name: fatherName,
-        address,
-        dob,
-        use_cache: useCache
-      });
+      const res = await api.post(
+        "api/executeCcrvRapid",
+        {
+          usr_ser_id,
+          mas_ser_id,
+          mas_cat_id,
+          file_no:fileNo,
+          name,
+          father_name:fatherName,
+          address,
+          dob
+        }
+      );
 
       const txnId = res.data?.data?.data?.transaction_id;
 
-      if (txnId) {
+      if(txnId){
 
         setTransactionId(txnId);
+
         setStatus("IN_PROGRESS");
 
-        localStorage.setItem("ccrv_txn", txnId);
+        localStorage.setItem(
+          "ccrv_txn",
+          JSON.stringify({
+            txnId,
+            createdAt:Date.now()
+          })
+        );
 
         swal.fire(
           "Search Started",
-          "CCRV search initiated",
+          "CCRV verification initiated",
           "success"
         );
 
       }
 
-    } catch {
+    }catch{
 
       swal.fire(
-        "Service Unavailable",
-        "Please try again later",
+        "Service Error",
+        "Unable to start search",
         "error"
       );
 
-    } finally {
+    }finally{
 
       setLoading(false);
 
@@ -904,7 +1428,7 @@ export default function FetchCcrvRapid() {
 
   /* ================= RESET ================= */
 
-  const resetRequest = () => {
+  const resetRequest = ()=>{
 
     localStorage.removeItem("ccrv_txn");
 
@@ -914,73 +1438,48 @@ export default function FetchCcrvRapid() {
 
   };
 
-  /* ================= EXPORT PDF ================= */
+  /* ================= BADGE COLOR ================= */
 
-  const exportPdf = () => {
+  const badgeVariant = ()=>{
 
-    if (!result) return;
+    if(status === "COMPLETED") return "success";
 
-    pdfMake.createPdf({
+    if(status === "IN_PROGRESS") return "warning";
 
-      content: [
-
-        { text: "CCRV Rapid Report", style: "header" },
-
-        { text: `File Number: ${fileNo}`, margin: [0, 10] },
-
-        {
-          table: {
-            widths: ["20%", "20%", "20%", "20%", "20%"],
-            body: [
-              ["Case No", "Type", "Category", "Status", "Decision Date"],
-              ...(result.cases || []).map((c) => [
-                c.case_number || "-",
-                c.case_type || "-",
-                c.case_category || "-",
-                c.case_status || "-",
-                c.case_decision_date || "-"
-              ])
-            ]
-          }
-        }
-
-      ],
-
-      styles: { header: { fontSize: 18, bold: true } }
-
-    }).download(`CCRV_${fileNo}.pdf`);
-
-  };
-
-  const getBadgeVariant = () => {
-
-    if (status === "COMPLETED") return "success";
-    if (status === "IN_PROGRESS") return "warning";
     return "secondary";
 
   };
 
   return (
+
     <Row>
 
       <Col md={12}>
 
         <Card body className="mb-3">
 
-          <Button onClick={() => navigate(-1)}>← Back</Button>
+          <Button onClick={()=>navigate(-1)}>
+            ← Back
+          </Button>
 
           <h4 className="mt-3">{service_name}</h4>
 
-          <p>Credits Required: <b>{credits}</b></p>
+          <p>
+            Credits Required: <b>{credits}</b>
+          </p>
 
         </Card>
+
+        {/* INPUT FORM */}
 
         <Card body className="mb-4">
 
           <Row>
 
             <Col md={4}>
-              <Form.Label>File Number <Required/></Form.Label>
+              <Form.Label>
+                File Number <Required/>
+              </Form.Label>
               <Form.Control
                 value={fileNo}
                 onChange={(e)=>setFileNo(e.target.value)}
@@ -988,7 +1487,9 @@ export default function FetchCcrvRapid() {
             </Col>
 
             <Col md={4}>
-              <Form.Label>Name <Required/></Form.Label>
+              <Form.Label>
+                Name <Required/>
+              </Form.Label>
               <Form.Control
                 value={name}
                 onChange={(e)=>setName(e.target.value)}
@@ -1038,25 +1539,38 @@ export default function FetchCcrvRapid() {
             disabled={loading}
             onClick={handleFetch}
           >
-            {loading ? <Spinner size="sm"/> : "Start CCRV Search"}
+            {loading
+              ? <Spinner size="sm"/>
+              : "Start CCRV Search"}
           </Button>
 
         </Card>
+
+        {/* STATUS CARD */}
 
         {transactionId && !result && (
 
           <Card body className="mb-3">
 
             <h5>
+
               CCRV Request Status{" "}
-              <Badge bg={getBadgeVariant()}>
+
+              <Badge bg={badgeVariant()}>
                 {status}
               </Badge>
+
             </h5>
 
-            <p>Transaction ID: <b>{transactionId}</b></p>
+            <p>
+              Transaction ID:
+              <b> {transactionId}</b>
+            </p>
 
-            <Spinner animation="border" size="sm"/> Processing...
+            <Spinner
+              animation="border"
+              size="sm"
+            /> Processing...
 
             <div className="mt-3">
 
@@ -1081,21 +1595,18 @@ export default function FetchCcrvRapid() {
 
         )}
 
+        {/* RESULT */}
+
         {result && (
 
           <Card body>
 
-            <div className="d-flex justify-content-between">
+            <h5>CCRV Result</h5>
 
-              <h5>CCRV Result</h5>
-
-              <Button onClick={exportPdf}>
-                Export PDF
-              </Button>
-
-            </div>
-
-            <div style={{maxHeight:400,overflow:"auto"}}>
+            <div style={{
+              maxHeight:400,
+              overflow:"auto"
+            }}>
               <JsonTableViewer data={result}/>
             </div>
 
@@ -1106,6 +1617,7 @@ export default function FetchCcrvRapid() {
       </Col>
 
     </Row>
+
   );
 
 }

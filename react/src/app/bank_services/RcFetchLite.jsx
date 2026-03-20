@@ -489,7 +489,7 @@ export default function RcFetchLite() {
   };
 
   /* ================= EXPORT PDF ================= */
-const exportPdf = () => {
+const exportPdf1 = () => {
   if (!result) return;
 
   const transactionId = result?.transaction_id || "-";
@@ -612,7 +612,119 @@ const exportPdf = () => {
 
   pdfMake.createPdf(doc).download(`RC_LITE_${fileNo}.pdf`);
 };
+const exportPdf = () => {
+  if (!result?.data?.rc_data) return;
 
+  const transactionId = result?.transaction_id || "-";
+  const requestId = result?.request_id || "-";
+  const rc = result?.data?.rc_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : v;
+
+  const section = (title) => ({
+    text: title,
+    style: "section",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["40%", "60%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ========= DYNAMIC SECTION BUILDER ========= */
+const buildSections = (obj) => {
+  const content = [];
+  const rootRows = [];
+
+  Object.entries(obj || {}).forEach(([key, value]) => {
+    const title = key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
+    /* ⭐ primitive → collect */
+    if (typeof value !== "object" || value === null) {
+      rootRows.push([title, value]);
+    }
+
+    /* ⭐ object → section */
+    else if (!Array.isArray(value)) {
+      const rows = Object.entries(value).map(([k, v]) => [
+        k
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase()),
+        v,
+      ]);
+
+      content.push(section(title));
+      content.push(twoCol(rows));
+    }
+
+    /* ⭐ array */
+    else {
+      value.forEach((item, i) => {
+        const rows = Object.entries(item).map(([k, v]) => [
+          k
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase()),
+          v,
+        ]);
+
+        content.push(section(`${title} ${i + 1}`));
+        content.push(twoCol(rows));
+      });
+    }
+  });
+
+  /* ⭐ finally print root primitive section */
+  if (rootRows.length) {
+    content.unshift(section("Registration Details"));
+    content.unshift(twoCol(rootRows));
+  }
+
+  return content;
+};
+
+  const doc = {
+    content: [
+      { text: "RC Lite Detailed Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Transaction ID: ${transactionId}` },
+      { text: `Request ID: ${requestId}` },
+
+      { qr: transactionId, fit: 80, alignment: "right", margin: [0, 10] },
+
+      /* ⭐ FULL DYNAMIC RC DATA */
+      ...buildSections(rc),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        fontSize: 9,
+        italics: true,
+      },
+    ],
+
+    styles: {
+      header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+      section: { fontSize: 14, bold: true },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`RC_LITE_${fileNo}.pdf`);
+};
   const code = result?.data?.code;
 
   const getBadgeVariant = () => {

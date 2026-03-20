@@ -3,7 +3,7 @@ import db from "../database/db.js";
 import FormData from "form-data";
 import fs from "fs";
 
-export const fetchUploadBankStatementController = async (req, res) => {
+export const fetchUploadBankStatementController1 = async (req, res) => {
   const connection = await db.getConnection();
   try {
     console.log("📥 Upload Bank Statement API HIT");
@@ -163,7 +163,183 @@ export const fetchUploadBankStatementController = async (req, res) => {
     connection.release();
   }
 };
+export const fetchUploadBankStatementController = async (req, res) => {
+  const connection = await db.getConnection();
 
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      bank_name,
+      password,
+      consent,
+    } = req.body;
+
+    const file = req.file;
+
+    if (
+      !usr_ser_id ||
+      !mas_ser_id ||
+      !mas_cat_id ||
+      !file_no ||
+      !file ||
+      consent !== "Y"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    /* ===== GRIDLINES ===== */
+    const formData = new FormData();
+    formData.append("file", fs.createReadStream(file.path));
+    if (bank_name) formData.append("bank_name", bank_name);
+    if (password) formData.append("password", password);
+    formData.append("consent", "Y");
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/bank-api/bank-statement-analyzer/upload",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const transactionId = fullResponse?.data?.transaction_id || null;
+    const requestId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1019") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    /* ===== FETCH LOG ===== */
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    /* ===== WALLET DEDUCT ===== */
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    /* ===== USER SERVICE LOG ===== */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        shouldDeduct ? creditsUsed : 0,
+        "BANK_STATEMENT_UPLOAD",
+        responseStatus,
+        walletTransactionId,
+        transactionId,
+        requestId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+  } catch (err) {
+    await connection.rollback();
+
+    console.error("❌ BANK STATEMENT UPLOAD ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};
 export const fetchBankStatementReportController = async (req, res) => {
   try {
     const { transaction_id } = req.query;
@@ -193,7 +369,7 @@ export const fetchBankStatementReportController = async (req, res) => {
   }
 };
 
-export const fetchBankStatementOCRController = async (req, res) => {
+export const fetchBankStatementOCRController1 = async (req, res) => {
   const connection = await db.getConnection();
 
   try {
@@ -322,8 +498,178 @@ export const fetchBankStatementOCRController = async (req, res) => {
     connection.release();
   }
 };
+export const fetchBankStatementOCRController = async (req, res) => {
+  const connection = await db.getConnection();
 
-export const fetchChequeOcrController = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      consent,
+    } = req.body;
+
+    const file = req.file;
+
+    if (
+      !usr_ser_id ||
+      !mas_ser_id ||
+      !mas_cat_id ||
+      !file_no ||
+      !file ||
+      consent !== "Y"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    /* ===== GRIDLINES ===== */
+    const formData = new FormData();
+    formData.append("file_front", fs.createReadStream(file.path));
+    formData.append("consent", "Y");
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/bank-api/statement/ocr",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const transactionId = fullResponse?.transaction_id || null;
+    const requestId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1030") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    /* ===== FETCH LOG ===== */
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    /* ===== WALLET DEDUCTION ===== */
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    /* ===== USER SERVICE LOG ===== */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        shouldDeduct ? creditsUsed : 0,
+        "BANK_STATEMENT_OCR",
+        responseStatus,
+        walletTransactionId,
+        transactionId,
+        requestId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+  } catch (err) {
+    await connection.rollback();
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};
+export const fetchChequeOcrController1 = async (req, res) => {
   const connection = await db.getConnection();
   try {
     console.log("📥 Cheque OCR API HIT");
@@ -513,8 +859,180 @@ export const fetchChequeOcrController = async (req, res) => {
     connection.release();
   }
 };
+export const fetchChequeOcrController = async (req, res) => {
+  const connection = await db.getConnection();
 
-export const fetchSalarySlipOcrController = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      consent,
+    } = req.body;
+
+    const file = req.file;
+
+    if (
+      !usr_ser_id ||
+      !mas_ser_id ||
+      !mas_cat_id ||
+      !file_no ||
+      !file ||
+      consent !== "Y"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* ===== SERVICE ===== */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* ===== WALLET ===== */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    /* ===== GRIDLINES ===== */
+    const formData = new FormData();
+    formData.append("file_front", fs.createReadStream(file.path));
+    formData.append("consent", "Y");
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/bank-api/cheque/ocr",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const transactionId = fullResponse?.transaction_id || null;
+    const requestId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1030") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    /* ===== FETCH LOG ===== */
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    /* ===== WALLET DEDUCTION ===== */
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    /* ===== USER SERVICE LOG ===== */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        shouldDeduct ? creditsUsed : 0,
+        "CHEQUE_OCR",
+        responseStatus,
+        walletTransactionId,
+        transactionId,
+        requestId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+  } catch (err) {
+    await connection.rollback();
+
+    console.error("❌ CHEQUE OCR ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};
+export const fetchSalarySlipOcrController1 = async (req, res) => {
   const connection = await db.getConnection();
   try {
     console.log("📥 Salary Slip OCR API HIT");
@@ -707,7 +1225,164 @@ export const fetchSalarySlipOcrController = async (req, res) => {
     connection.release();
   }
 };
+export const fetchSalarySlipOcrController = async (req, res) => {
+  const connection = await db.getConnection();
 
+  try {
+    const userId = req.user.userId;
+
+    const { usr_ser_id, mas_ser_id, mas_cat_id, file_no, consent } = req.body;
+    const file = req.file;
+
+    if (!usr_ser_id || !mas_ser_id || !mas_cat_id || !file_no || !file || consent !== "Y") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    /* SERVICE */
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    /* WALLET */
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    /* FILE BASE64 */
+    const base64 = fs.readFileSync(file.path).toString("base64");
+
+    /* GRIDLINES */
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/bank-api/salary-slip/ocr",
+      {
+        base64_data: base64,
+        consent: "Y",
+      },
+      {
+        headers: {
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const transactionId = fullResponse?.transaction_id || null;
+    const requestId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1030") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    /* FETCH LOG */
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    /* WALLET DEDUCTION */
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    /* SERVICE LOG */
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+        credits_used, api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        shouldDeduct ? creditsUsed : 0,
+        "SALARY_SLIP_OCR",
+        responseStatus,
+        walletTransactionId,
+        transactionId,
+        requestId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+
+  } catch (err) {
+    await connection.rollback();
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  } finally {
+    connection.release();
+  }
+};
 //  new controller to handle both bank account verify and ifsc verify with same code, just by passing different mas_ser_id and mas_cat_id from frontend. This will help us to maintain cache in better way and also reduce code redundancy.
 
 export const checkBankAccountVerifyCacheController = async (req, res) => {

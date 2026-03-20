@@ -176,7 +176,6 @@ export default function FetchUdyamByMobile() {
             body: [
               ["File Number", fileNo],
               ["Mobile Number", mobile],
-              ["Service Name", service_name || "Fetch Udyam By Mobile"],
             ],
           },
           layout: "lightHorizontalLines",
@@ -193,11 +192,7 @@ export default function FetchUdyamByMobile() {
           margin: [0, 5],
         },
 
-        { text: "Full API Response", style: "subHeader", margin: [0, 15] },
-        {
-          text: JSON.stringify(result, null, 2),
-          fontSize: 7,
-        },
+       
 
         {
           text: `Generated On: ${new Date().toLocaleString()}`,

@@ -440,7 +440,7 @@ export const fetchVerifyUdyamAdvancedController = async (req, res) => {
   }
 };
 
-export const fetchUdyamCertificateOcrController = async (req, res) => {
+export const fetchUdyamCertificateOcrController1 = async (req, res) => {
   const connection = await db.getConnection();
 
   try {
@@ -603,7 +603,182 @@ export const fetchUdyamCertificateOcrController = async (req, res) => {
     connection.release();
   }
 };
+export const fetchUdyamCertificateOcrController = async (req, res) => {
+  const connection = await db.getConnection();
 
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      consent,
+    } = req.body;
+
+    const file = req.file;
+
+    if (!usr_ser_id || !mas_ser_id || !mas_cat_id || !file_no || !file || consent !== "Y") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    const formData = new FormData();
+    formData.append("file_front", fs.createReadStream(file.path));
+    formData.append("consent", "Y");
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/msme-api/udyam-certificate-ocr",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const txn = fullResponse?.transaction_id || null;
+    const reqId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1013") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    const inputPayload = JSON.stringify({
+      file_no,
+      file_name: file.originalname,
+    });
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+         credits_used,
+        api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        
+        shouldDeduct ? creditsUsed : 0,
+        "UDYAM_CERTIFICATE_OCR",
+        responseStatus,
+        walletTransactionId,
+        txn,
+        reqId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+
+  } catch (err) {
+    await connection.rollback();
+
+    if (err?.response?.data) {
+      return res.json({
+        success: true,
+        data: err.response.data,
+      });
+    }
+
+    console.error("❌ UDYAM OCR ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+
+  } finally {
+    connection.release();
+  }
+};
 //new controllers can be added here
 
 export const checkUdyamMobileCache = async (req, res) => {
@@ -1453,7 +1628,7 @@ export const checkVerifyUdyamAdvancedCache = async (req, res) => {
     if (existing) {
       return res.json({
         hasCache: true,
-        lastFetchedAt: existing.created_at,
+        lastFetchedAt: existing.fetched_at,
       });
     }
 

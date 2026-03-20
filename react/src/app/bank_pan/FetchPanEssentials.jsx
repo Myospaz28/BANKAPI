@@ -200,17 +200,9 @@ export default function FetchPanEssentials() {
               ["Full Name", safe(d.name)],
               ["Date of Birth", safe(d.date_of_birth)],
               ["File Number", fileNo || "-"],
-              ["Generated On", new Date().toLocaleString()],
             ],
           },
           layout: "lightHorizontalLines",
-        },
-
-        {
-          text: "\n\nThis document is generated electronically and contains a QR code for verification.",
-          fontSize: 8,
-          italics: true,
-          color: "gray",
         },
       ],
 

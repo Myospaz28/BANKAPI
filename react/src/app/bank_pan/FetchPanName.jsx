@@ -201,12 +201,6 @@ export default function FetchPanName() {
           layout: "lightHorizontalLines",
         },
 
-        {
-          text: "\nScan QR code to verify request details.",
-          fontSize: 8,
-          italics: true,
-          color: "gray",
-        },
       ],
 
       styles: {

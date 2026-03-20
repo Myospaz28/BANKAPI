@@ -158,6 +158,7 @@ export default function FetchBankAccountVerifyHybrid() {
       });
 
       const apiData = executeRes.data?.data;
+      // console.log("apidata" , apiData)
       const code = apiData?.data?.code;
 
       setResult(normalizeResult(apiData));
@@ -192,7 +193,7 @@ export default function FetchBankAccountVerifyHybrid() {
     }
   };
 
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const bank = result?.data?.bank_account_data || {};
@@ -220,8 +221,6 @@ export default function FetchBankAccountVerifyHybrid() {
           },
         },
 
-        { text: "Full API Response", style: "sub", margin: [0, 10] },
-        { text: JSON.stringify(result, null, 2), fontSize: 8 },
       ],
       styles: {
         header: { fontSize: 18, bold: true },
@@ -231,7 +230,92 @@ export default function FetchBankAccountVerifyHybrid() {
 
     pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
 
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const data = result?.data || {};
+  const bank = data?.bank_account_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "sub",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ⭐ dynamic rows builder */
+  const buildRows = (obj) =>
+    Object.entries(obj || {}).map(([k, v]) => [
+      k
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase()),
+      v,
+    ]);
+
+  const doc = {
+    pageSize: "A4",
+    pageOrientation: "portrait",
+    pageMargins: [40, 60, 40, 60],
+
+    content: [
+      { text: "Bank Account Verification Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      {
+        qr: transactionId,
+        fit: 70,
+        alignment: "right",
+        margin: [0, 10],
+      },
+
+      section("Status Details"),
+      twoCol([
+        ["Status Code", data?.code],
+        ["Message", data?.message],
+      ]),
+
+      section("Bank Account Details"),
+      twoCol(buildRows(bank)),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: { fontSize: 18, bold: true },
+      sub: { fontSize: 14, bold: true },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
+};
   const code = result?.data?.code;
 
   const getBadgeVariant = () => {

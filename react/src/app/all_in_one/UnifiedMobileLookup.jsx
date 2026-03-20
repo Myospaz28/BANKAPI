@@ -663,7 +663,7 @@ export default function UnifiedMobileLookup() {
       });
 
       const { pan, prefill, footprint, mobile_age, rc_lookup } = execRes.data?.data || {};
-
+// console.log("first" ,execRes.data?.data)
       setPanResult(normalize(pan));
       setPrefillResult(normalize(prefill));
       setFootprintResult(footprint);
@@ -693,7 +693,7 @@ export default function UnifiedMobileLookup() {
   };
 
   /* ══════════════════ PDF EXPORT ══════════════════ */
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!panResult && !prefillResult && !footprintResult && !mobileAgeResult && !rcLookupResult) {
       swal.fire("No Data", "Nothing to export.", "warning");
       return;
@@ -831,6 +831,203 @@ export default function UnifiedMobileLookup() {
       defaultStyle: { fontSize: 10 },
     }).download(`UNIFIED_LOOKUP_${fileNo}_${mobile}.pdf`);
   };
+const isApiError = (res) => {
+  if (!res) return false;
+
+  /* real http failure */
+  if (res.status && res.status !== 200) return true;
+
+  /* vendor error block */
+  if (res.error) return true;
+
+  /* no data returned */
+  if (!res.data) return true;
+
+  return false;
+};
+const renderApiError = (res) => ({
+  table: {
+    widths: ["45%", "55%"],
+    body: [
+      [
+        { text: "Status", bold: true },
+        "Service temporarily unavailable / API error",
+      ],
+      [
+        { text: "Message", bold: true },
+        res?.data?.message ||
+          res?.error?.message ||
+          "Unexpected server error",
+      ],
+      [
+        { text: "Transaction ID", bold: true },
+        res?.transaction_id || "-",
+      ],
+      [
+        { text: "Request ID", bold: true },
+        res?.request_id || "-",
+      ],
+    ],
+  },
+  layout: "lightHorizontalLines",
+});
+const exportPdf = () => {
+  if (
+    !panResult &&
+    !prefillResult &&
+    !footprintResult &&
+    !mobileAgeResult &&
+    !rcLookupResult
+  ) {
+    swal.fire("No Data", "Nothing to export.", "warning");
+    return;
+  }
+
+  /* ⭐ build unified object */
+  const unified = {
+    PAN_LOOKUP: panResult,
+    MOBILE_PREFILL: prefillResult,
+    DIGITAL_FOOTPRINT: footprintResult,
+    MOBILE_AGE: mobileAgeResult,
+    RC_LOOKUP: rcLookupResult,
+  };
+
+  /* ⭐ safe formatter */
+  const safe = (v) =>
+    v === undefined || v === null || v === ""
+      ? "-"
+      : typeof v === "boolean"
+      ? v
+        ? "Yes"
+        : "No"
+      : String(v);
+
+  /* ⭐ deep recursion renderer */
+  const renderDeep = (node, title = null) => {
+    let content = [];
+
+    const makeSection = (t) => ({
+      text: t,
+      style: "subSection",
+      margin: [0, 10, 0, 4],
+    });
+
+    const makeRow = (k, v) => ({
+      table: {
+        widths: ["45%", "55%"],
+        body: [[{ text: k, bold: true }, safe(v)]],
+      },
+      layout: "lightHorizontalLines",
+    });
+
+    if (title) content.push(makeSection(title));
+
+    /* ⭐ primitive */
+    if (typeof node !== "object" || node === null) {
+      content.push(makeRow(title || "Value", node));
+      return content;
+    }
+
+    /* ⭐ array */
+    if (Array.isArray(node)) {
+      if (!node.length) {
+        content.push(makeRow(title || "Value", "-"));
+        return content;
+      }
+
+      node.forEach((item, i) => {
+        content.push(
+          ...renderDeep(item, `${title || "Item"} ${i + 1}`)
+        );
+      });
+
+      return content;
+    }
+
+    /* ⭐ object */
+    Object.entries(node).forEach(([k, v]) => {
+      const label = k
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      if (typeof v === "object" && v !== null) {
+        content.push(...renderDeep(v, label));
+      } else {
+        content.push(makeRow(label, v));
+      }
+    });
+
+    return content;
+  };
+
+  /* ⭐ PDF content start */
+  const content = [
+    { text: "Unified Mobile Lookup Report", style: "header" },
+    { text: `File Number: ${fileNo}` },
+    { text: `Mobile Number: ${mobile}` },
+
+    {
+      qr: mobile,
+      fit: 70,
+      alignment: "right",
+      margin: [0, 10],
+    },
+  ];
+
+  /* ⭐ render each api */
+Object.entries(unified).forEach(([api, data]) => {
+  if (!data) return;
+
+  content.push({
+    text: api.replace(/_/g, " "),
+    style: "section",
+    margin: [0, 12, 0, 6],
+  });
+
+  /* ⭐ universal error handler */
+  if (isApiError(data)) {
+    content.push(renderApiError(data));
+    return;
+  }
+
+  /* ⭐ normal deep renderer */
+  content.push(...renderDeep(data));
+});
+
+  content.push({
+    text: `Generated On: ${new Date().toLocaleString()}`,
+    margin: [0, 15],
+    italics: true,
+    fontSize: 9,
+  });
+
+  pdfMake
+    .createPdf({
+      pageSize: "A4",
+      pageOrientation: "portrait",
+      pageMargins: [40, 60, 40, 60],
+      content,
+      styles: {
+        header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10],
+        },
+        section: {
+          fontSize: 14,
+          bold: true,
+        },
+        subSection: {
+          fontSize: 12,
+          bold: true,
+        },
+      },
+      defaultStyle: {
+        fontSize: 9,
+      },
+    })
+    .download(`UNIFIED_LOOKUP_${fileNo}_${mobile}.pdf`);
+};
 
   const panCode       = panResult?.data?.code;
   const prefillCode   = prefillResult?.data?.code;

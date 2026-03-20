@@ -108,6 +108,7 @@ export default function FetchLatestPassbookByMobile() {
       });
 
       setResult(res.data?.data);
+      // console.log("first" ,res.data?.data)
       fetchWallet();
       swal.fire("Completed", "Request processed", "success");
     } catch {
@@ -118,7 +119,7 @@ export default function FetchLatestPassbookByMobile() {
   };
 
   /* ================= PDF EXPORT ================= */
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const requestId = result?.request_id || "-";
@@ -215,7 +216,174 @@ export default function FetchLatestPassbookByMobile() {
 
     pdfMake.createPdf(doc).download(`LatestPassbook_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
 
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const passbook = result?.data?.passbook_data || {};
+  const source = result?.data?.source || [];
+
+  const safe = (v) =>
+    v === undefined || v === null || v === ""
+      ? "-"
+      : Array.isArray(v)
+      ? v.join(", ")
+      : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "sub",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ⭐ dynamic array table */
+  const buildArrayTable = (title, arr) => {
+    if (!arr.length) return [];
+
+    const headers = Object.keys(arr[0]);
+
+    return [
+      section(title),
+      {
+        table: {
+          headerRows: 1,
+          widths: headers.map(() => "*"),
+          body: [
+            headers.map((h) => ({
+              text: h
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase()),
+              bold: true,
+            })),
+            ...arr.map((row) =>
+              headers.map((h) => safe(row[h]))
+            ),
+          ],
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 5],
+      },
+    ];
+  };
+
+  /* ⭐ recursive builder */
+  const buildObject = (obj) => {
+    const content = [];
+
+    Object.entries(obj || {}).forEach(([key, value]) => {
+      const title = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+
+      if (Array.isArray(value)) {
+        /* special case employer array */
+        if (key === "employers") {
+          value.forEach((emp, i) => {
+            content.push(section(`Employer ${i + 1}`));
+
+            const simpleRows = [];
+
+            Object.entries(emp).forEach(([k, v]) => {
+              if (Array.isArray(v)) return;
+              simpleRows.push([
+                k
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (l) => l.toUpperCase()),
+                v,
+              ]);
+            });
+
+            content.push(twoCol(simpleRows));
+
+            Object.entries(emp).forEach(([k, v]) => {
+              if (Array.isArray(v)) {
+                content.push(
+                  ...buildArrayTable(
+                    k
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (l) => l.toUpperCase()),
+                    v
+                  )
+                );
+              }
+            });
+          });
+        } else {
+          content.push(...buildArrayTable(title, value));
+        }
+      } else if (typeof value === "object" && value !== null) {
+        content.push(section(title));
+        content.push(...buildObject(value));
+      } else {
+        content.push(
+          twoCol([
+            [title, value],
+          ])
+        );
+      }
+    });
+
+    return content;
+  };
+
+  const doc = {
+    pageSize: "A4",
+    pageOrientation: "portrait",
+    pageMargins: [35, 50, 35, 50],
+
+    content: [
+      { text: "EPFO Passbook Detailed Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      {
+        qr: requestId !== "-" ? requestId : "PASSBOOK",
+        fit: 70,
+        alignment: "right",
+        margin: [0, 10],
+      },
+
+      section("Source"),
+      twoCol([["Source", source]]),
+
+      section("Passbook Data"),
+      ...buildObject(passbook),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+      sub: { fontSize: 14, bold: true },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`EPFO_PASSBOOK_${fileNo}.pdf`);
+};
   const code = result?.data?.code;
 
   const badgeVariant =

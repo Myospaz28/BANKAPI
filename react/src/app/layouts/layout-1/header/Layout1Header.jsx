@@ -167,9 +167,13 @@ export default function Layout1Header() {
 
   return (
     <div className="main-header">
-      <div className="logo">
-        <img src="/assets/images/logo.jpeg" alt="Logo" />
-      </div>
+    <div className="logo d-flex align-items-center">
+  <img
+    src="/assets/images/logo.jpeg"
+    alt="Logo"
+    style={{ height: 45, width: "auto", objectFit: "contain" }}
+  />
+</div>
 
       <div className="menu-toggle" onClick={handleMenuClick}>
         <div />
@@ -177,10 +181,32 @@ export default function Layout1Header() {
         <div />
       </div>
 
-      <div className="m-auto" />
-  <div className="d-none d-md-block">
-          <UserSessionCard compact /> 
-        </div>
+<div
+  className="m-auto fw-semibold d-flex align-items-end"
+  style={{
+    fontSize: 22,
+    letterSpacing: 0.5,
+    fontFamily: "Segoe UI, Arial, Helvetica, sans-serif",
+    lineHeight: 1,
+  }}
+>
+  <span
+    style={{
+      background: "linear-gradient(60deg, #0d6efd, #198754)",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      fontWeight: 700,
+      fontSize: 38,
+      marginRight: 3,
+    }}
+  >
+    R
+  </span>
+  <span style={{ paddingBottom: 3 }}>-view</span>
+</div>
+      <div className="d-none d-md-block">
+        <UserSessionCard compact />
+      </div>
       <div className="header-part-right">
         {/* <i
           datafullscreen="true"

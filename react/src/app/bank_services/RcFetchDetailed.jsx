@@ -494,7 +494,7 @@ export default function RcFetchDetailed() {
       setLoading(false);
     }
   };
-const exportPdf = () => {
+const exportPdf1 = () => {
   if (!result?.data?.rc_data) {
     swal.fire("No Data", "Nothing to export", "warning");
     return;
@@ -616,7 +616,141 @@ const exportPdf = () => {
 
   pdfMake.createPdf(doc).download(`RC_DETAILED_${fileNo}.pdf`);
 };
+const exportPdf = () => {
+  if (!result?.data?.rc_data) {
+    swal.fire("No Data", "Nothing to export", "warning");
+    return;
+  }
 
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+  const rc = result?.data?.rc_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" || v === "null"
+      ? "-"
+      : v;
+
+  /* ========= SECTION TITLE ========= */
+  const section = (title) => ({
+    text: title,
+    style: "section",
+    margin: [0, 12, 0, 6],
+  });
+
+  /* ========= TABLE BUILDER ========= */
+  const table = (rows) => ({
+    table: {
+      widths: ["40%", "60%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ========= DYNAMIC BUILDER ========= */
+ const buildDynamicContent = (obj) => {
+  const content = [];
+
+  Object.entries(obj || {}).forEach(([key, value]) => {
+    const title = key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
+    /* ⭐ primitive → ONLY table row (NO section) */
+    if (typeof value !== "object" || value === null) {
+      content.push(
+        table([
+          [title, value],
+        ])
+      );
+    }
+
+    /* ⭐ object */
+    else if (!Array.isArray(value)) {
+      const entries = Object.entries(value);
+
+      // ⭐ if object has only ONE field → no section
+      if (entries.length === 1) {
+        const [k, v] = entries[0];
+
+        content.push(
+          table([
+            [
+              k
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase()),
+              v,
+            ],
+          ])
+        );
+      } else {
+        const rows = entries.map(([k, v]) => [
+          k
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase()),
+          v,
+        ]);
+
+        content.push(section(title));
+        content.push(table(rows));
+      }
+    }
+
+    /* ⭐ array */
+    else {
+      value.forEach((item, i) => {
+        const rows = Object.entries(item).map(([k, v]) => [
+          k
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase()),
+          v,
+        ]);
+
+        content.push(section(`${title} ${i + 1}`));
+        content.push(table(rows));
+      });
+    }
+  });
+
+  return content;
+};
+
+  const doc = {
+    content: [
+      { text: "RC Detailed Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      { qr: transactionId, fit: 80, alignment: "right", margin: [0, 10] },
+
+      /* ⭐ FULL DYNAMIC DATA */
+      ...buildDynamicContent(rc),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        fontSize: 9,
+        italics: true,
+      },
+    ],
+
+    styles: {
+      header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+      section: { fontSize: 14, bold: true },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`RC_DETAILED_${fileNo}.pdf`);
+};
 
   const code = result?.data?.code;
 

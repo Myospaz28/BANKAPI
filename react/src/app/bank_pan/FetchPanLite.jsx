@@ -448,20 +448,12 @@ export default function FetchPanLite() {
               ["File Number", safe(fileNo)],
               ["Document Type", safe(d.document_type)],
               ["Full Name", safe(d.name)],
-              ["Generated On", new Date().toLocaleString()],
             ],
           },
           layout: "lightHorizontalLines",
         },
 
-        {
-          text:
-            "\nScan QR code to verify request details.\n\n" +
-            "Disclaimer: PAN Lite returns basic validation data as per government records.",
-          fontSize: 8,
-          italics: true,
-          color: "gray",
-        },
+    
       ],
 
       styles: {

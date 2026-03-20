@@ -2584,7 +2584,7 @@ export const checkDigitalFootprintCacheController = async (req, res) => {
        WHERE mas_ser_id = ?
          AND mas_cat_id = ?
          AND mobile_number = ?
-          AND api_name = 'DIGITAL_FOOTPRINT' 
+        
        ORDER BY ser_fet_log_id DESC
        LIMIT 1`,
       [mas_ser_id, mas_cat_id, phone],
@@ -4385,7 +4385,6 @@ export const checkMobilePrefillCacheController = async (req, res) => {
       WHERE mas_ser_id = ?
         AND mas_cat_id = ?
         AND mobile_number = ?
-        AND api_name = 'MOBILE_PREFILL'
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,
@@ -4892,7 +4891,7 @@ export const checkPanLookupByMobileCacheController = async (req, res) => {
       WHERE mas_ser_id = ?
         AND mas_cat_id = ?
         AND mobile_number = ?
-        AND api_name = 'PAN_LOOKUP_BY_MOBILE'
+     
       ORDER BY ser_fet_log_id DESC
       LIMIT 1
       `,

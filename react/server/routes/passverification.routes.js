@@ -4,8 +4,12 @@ import multer from "multer";
 import { verifyToken } from "../middleware/auth.middleware.js";
 import {
   checkGenerateMrzCache,
+  checkPassportFetchCache,
+  checkPassportVerifyCache,
   checkVerifyMrzCache,
   executeGenerateMrzController,
+  executePassportFetchController,
+  executePassportVerifyController,
   executeVerifyMrzController,
   fetchGenerateMrzController,
   fetchPassportDetailsController,
@@ -53,7 +57,21 @@ router.post("/checkGenerateMrzCache", verifyToken, checkGenerateMrzCache);
 
 router.post("/executeGenerateMrz", verifyToken, executeGenerateMrzController);
 
+router.post("/checkPassportFetchCache", verifyToken, checkPassportFetchCache);
+router.post(
+  "/executePassportFetch",
+  verifyToken,
+  executePassportFetchController,
+);
+
 router.post("/checkVerifyMrzCache", verifyToken, checkVerifyMrzCache);
 router.post("/executeVerifyMrz", verifyToken, executeVerifyMrzController);
+
+router.post("/checkPassportVerifyCache", verifyToken, checkPassportVerifyCache);
+router.post(
+  "/executePassportVerify",
+  verifyToken,
+  executePassportVerifyController,
+);
 
 export default router;

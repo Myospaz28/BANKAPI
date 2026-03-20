@@ -176,7 +176,7 @@ export const fetchDrivingLicenseController = async (req, res) => {
   }
 };
 
-export const drivingLicenseOcrController = async (req, res) => {
+export const drivingLicenseOcrController1 = async (req, res) => {
   const connection = await db.getConnection();
 
   try {
@@ -324,7 +324,178 @@ export const drivingLicenseOcrController = async (req, res) => {
     connection.release();
   }
 };
+export const drivingLicenseOcrController = async (req, res) => {
+  const connection = await db.getConnection();
 
+  try {
+    const userId = req.user.userId;
+
+    const {
+      usr_ser_id,
+      mas_ser_id,
+      mas_cat_id,
+      file_no,
+      consent,
+    } = req.body;
+
+    const fileFront = req.files?.file_front?.[0];
+    const fileBack = req.files?.file_back?.[0];
+
+    if (!usr_ser_id || !mas_ser_id || !mas_cat_id || !file_no || !fileFront || consent !== "Y") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payload",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    const [[service]] = await connection.query(
+      `SELECT actual_credits
+       FROM user_services
+       WHERE usr_ser_id=? AND users_id=? AND status='active'
+       FOR UPDATE`,
+      [usr_ser_id, userId]
+    );
+
+    if (!service) throw new Error("Service not allowed");
+
+    const creditsUsed = Number(service.actual_credits);
+
+    const [[user]] = await connection.query(
+      `SELECT wallet_amount FROM users WHERE users_id=? FOR UPDATE`,
+      [userId]
+    );
+
+    const openingBalance = Number(user.wallet_amount);
+
+    const formData = new FormData();
+    formData.append("file_front", fs.createReadStream(fileFront.path));
+    if (fileBack) {
+      formData.append("file_back", fs.createReadStream(fileBack.path));
+    }
+    formData.append("consent", "Y");
+
+    const apiRes = await axios.post(
+      "https://api.gridlines.io/dl-api/ocr",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-API-Key": process.env.GRIDLINES_API_KEY,
+          "X-Auth-Type": "API-Key",
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const fullResponse = apiRes.data;
+
+    const transactionId = fullResponse?.transaction_id || null;
+    const requestId = fullResponse?.request_id || null;
+    const code = fullResponse?.data?.code;
+
+    let responseStatus = "failed";
+    let shouldDeduct = false;
+    let walletTransactionId = null;
+
+    if (code === "1002") {
+      responseStatus = "success";
+      shouldDeduct = true;
+    }
+
+    const [fetchInsert] = await connection.query(
+      `INSERT INTO service_data_fetch_log
+       (mas_ser_id, mas_cat_id, file_number,
+        api_response, response_status,
+        http_status_code, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        mas_ser_id,
+        mas_cat_id,
+        file_no,
+        JSON.stringify(fullResponse),
+        responseStatus,
+        apiRes.status,
+        userId,
+      ]
+    );
+
+    const serFetLogId = fetchInsert.insertId;
+
+    if (shouldDeduct) {
+      if (openingBalance < creditsUsed)
+        throw new Error("Insufficient balance");
+
+      const closingBalance = openingBalance - creditsUsed;
+
+      await connection.query(
+        `UPDATE users SET wallet_amount=? WHERE users_id=?`,
+        [closingBalance, userId]
+      );
+
+      const [walletTxn] = await connection.query(
+        `INSERT INTO wallet_transactions
+         (users_id, transaction_type, amount,
+          opening_balance, closing_balance,
+          reference_type, created_by)
+         VALUES (?, 'debit', ?, ?, ?, 'service_usage', ?)`,
+        [userId, creditsUsed, openingBalance, closingBalance, userId]
+      );
+
+      walletTransactionId = walletTxn.insertId;
+    }
+
+    const inputPayload = JSON.stringify({
+      file_no,
+      has_back: !!fileBack,
+    });
+
+    await connection.query(
+      `INSERT INTO user_service_logs
+       (users_id, usr_ser_id, file_no,
+         credits_used,
+        api_name, api_status,
+        wallet_transaction_id,
+        transaction_id, request_id,
+        ser_fet_log_id, created_by)
+       VALUES (?,  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        usr_ser_id,
+        file_no,
+        
+        shouldDeduct ? creditsUsed : 0,
+        "DRIVING_LICENSE_OCR",
+        responseStatus,
+        walletTransactionId,
+        transactionId,
+        requestId,
+        serFetLogId,
+        userId,
+      ]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      data: fullResponse,
+    });
+
+  } catch (err) {
+    await connection.rollback();
+    console.error("❌ DL OCR ERROR:", err.message);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+
+  } finally {
+    connection.release();
+  }
+};
 // new controllers can be added here
 
 export const checkDrivingLicenseCache = async (req, res) => {

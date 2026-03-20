@@ -6,11 +6,15 @@ import {
   checkEmploymentHistoryCache,
   checkLatestEmploymentCache,
   checkLatestPassbookCache,
+  checkUanMobileCache,
+  checkUanPanCache,
   checkUanProfileCache,
   executeEmployerVerifyController,
   executeEmploymentHistoryController,
   executeLatestEmploymentController,
   executeLatestPassbookController,
+  executeUanMobileController,
+  executeUanPanController,
   executeUanProfileController,
   fetchEmployerVerifyController,
   fetchEmploymentHistoryByUanController,
@@ -102,5 +106,12 @@ router.post(
   verifyToken,
   executeEmployerVerifyController,
 );
+
+
+router.post("/checkUanMobileCache", verifyToken, checkUanMobileCache);
+router.post("/executeUanMobile", verifyToken, executeUanMobileController);
+
+router.post("/checkUanPanCache", verifyToken, checkUanPanCache);
+router.post("/executeUanPan", verifyToken, executeUanPanController);
 
 export default router;

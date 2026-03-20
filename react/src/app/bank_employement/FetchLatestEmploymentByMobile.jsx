@@ -110,6 +110,7 @@ export default function FetchLatestEmploymentByMobile() {
       });
 
       setResult(res.data?.data);
+      // console.log("first " ,res.data?.data)
       fetchWallet();
       swal.fire("Completed", "Request processed", "success");
     } catch {
@@ -120,7 +121,7 @@ export default function FetchLatestEmploymentByMobile() {
   };
 
   /* ================= PDF ================= */
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const requestId = result?.request_id || "-";
@@ -163,6 +164,135 @@ export default function FetchLatestEmploymentByMobile() {
 
     pdfMake.createPdf(doc).download(`LatestEmployment_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
+
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const uanData = result?.data?.uan_data || [];
+
+  const safe = (v) =>
+    v === undefined || v === null || v === ""
+      ? "-"
+      : Array.isArray(v)
+      ? v.join(", ")
+      : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "section",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ⭐ recursive builder */
+  const buildObject = (obj, parentTitle = null) => {
+    const content = [];
+
+    if (parentTitle) content.push(section(parentTitle));
+
+    Object.entries(obj || {}).forEach(([key, value]) => {
+      const title = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        content.push(...buildObject(value, title));
+      } else if (Array.isArray(value)) {
+        content.push(
+          twoCol([
+            [title, safe(value)],
+          ])
+        );
+      } else {
+        content.push(
+          twoCol([
+            [title, value],
+          ])
+        );
+      }
+    });
+
+    return content;
+  };
+
+  /* ⭐ build full uan blocks */
+  const buildUanBlocks = () => {
+    const content = [];
+
+    if (!uanData.length) {
+      content.push({ text: "No UAN Records Found", margin: [0, 10] });
+      return content;
+    }
+
+    uanData.forEach((u, i) => {
+      content.push(section(`UAN Record ${i + 1}`));
+      content.push(...buildObject(u));
+    });
+
+    return content;
+  };
+
+  const doc = {
+    pageSize: "A4",
+    pageOrientation: "portrait",
+    pageMargins: [30, 40, 30, 40],
+
+    content: [
+      { text: "UAN Detailed Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      {
+        qr: requestId !== "-" ? requestId : "UAN",
+        fit: 70,
+        alignment: "right",
+        margin: [0, 10],
+      },
+
+      section("UAN Data"),
+      ...buildUanBlocks(),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 0, 0, 10],
+      },
+      section: {
+        fontSize: 14,
+        bold: true,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`UAN_${fileNo}.pdf`);
+};
 
   const code = result?.data?.code;
   const badgeVariant =

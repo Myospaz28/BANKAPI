@@ -1,5 +1,6 @@
 import { lazy } from "react";
 
+
 const FetchEmploymentHistory = lazy(
   () => import("./FetchEmploymentHistory.jsx"),
 );
@@ -15,6 +16,8 @@ const FetchLatestPassbookByMobile = lazy(
 const FetchUanProfileDetails = lazy(
   () => import("./FetchUanProfileDetails.jsx"),
 );
+const FetchUanFromMobile = lazy(() => import("./FetchUanFromMobile.jsx"));
+const FetchUanByPan = lazy(() => import("./FetchUanByPan.jsx"))
 
 const FetchEmployerVerify = lazy(() => import("./FetchEmployerVerify.jsx"));
 
@@ -38,6 +41,14 @@ const bank_empRountes = [
   {
     path: "/services/FetchEmployerVerify",
     element: <FetchEmployerVerify />,
+  },
+  {
+    path: "/services/FetchUanFromMobile",
+    element: <FetchUanFromMobile />,
+  },
+  {
+    path: "/services/FetchUanByPan",
+    element: <FetchUanByPan />,
   },
 ];
 

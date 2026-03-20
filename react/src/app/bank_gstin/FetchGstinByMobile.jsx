@@ -406,7 +406,6 @@ export default function FetchGstinByMobile() {
           title: "Success",
           html: `
             ${apiData?.data?.message}<br/>
-            Credits Deducted: <b>${credits}</b>
           `,
           icon: "success",
         });
@@ -488,8 +487,7 @@ const exportPdf = () => {
 
       gstinTable,
 
-      { text: "Full API Response", style: "sub", margin: [0, 10] },
-      { text: JSON.stringify(result, null, 2), fontSize: 8 },
+     
     ],
     styles: {
       header: {

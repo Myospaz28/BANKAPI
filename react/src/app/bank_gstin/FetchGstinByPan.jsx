@@ -502,8 +502,7 @@ export default function FetchGstinByPan() {
         { qr: requestId, fit: 80, alignment: "right", margin: [0, 10] },
         { text: "GSTIN Records", style: "sub", margin: [0, 10] },
         tableBlock,
-        { text: "Full API Response", style: "sub", margin: [0, 10] },
-        { text: JSON.stringify(result, null, 2), fontSize: 8 },
+
       ],
       styles: {
         header: { fontSize: 18, bold: true, marginBottom: 10 },
@@ -578,30 +577,7 @@ export default function FetchGstinByPan() {
               <Button onClick={exportPdf}>Export PDF</Button>
             </div>
 
-            {records.length > 0 && (
-              <Table bordered size="sm" className="mt-3">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>GSTIN</th>
-                    <th>Status</th>
-                    <th>State</th>
-                    <th>State Code</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map((r, i) => (
-                    <tr key={i}>
-                      <td>{i + 1}</td>
-                      <td>{safe(r.document_id)}</td>
-                      <td>{safe(r.status)}</td>
-                      <td>{safe(r.state)}</td>
-                      <td>{safe(r.state_code)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
+         
 
             <h6 className="mt-3">Full API Response</h6>
             <JsonTableViewer data={result} />

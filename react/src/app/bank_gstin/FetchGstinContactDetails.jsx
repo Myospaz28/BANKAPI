@@ -449,8 +449,6 @@ export default function FetchGstinContactDetails() {
         { text: "Contact Details", style: "sub", margin: [0, 10] },
         contactTable,
 
-        { text: "Full API Response", style: "sub", margin: [0, 10] },
-        { text: JSON.stringify(result, null, 2), fontSize: 8 },
       ],
       styles: {
         header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
@@ -480,6 +478,15 @@ export default function FetchGstinContactDetails() {
 
         <Card body className="mb-4">
           <Row>
+
+                   <Col md={4}>
+              <Form.Label>File Number <Required /></Form.Label>
+              <Form.Control
+                value={fileNo}
+                onChange={(e) => setFileNo(e.target.value)}
+              />
+            </Col>
+
             <Col md={4}>
               <Form.Label>GSTIN <Required /></Form.Label>
               <Form.Control
@@ -488,13 +495,7 @@ export default function FetchGstinContactDetails() {
               />
             </Col>
 
-            <Col md={4}>
-              <Form.Label>File Number <Required /></Form.Label>
-              <Form.Control
-                value={fileNo}
-                onChange={(e) => setFileNo(e.target.value)}
-              />
-            </Col>
+     
           </Row>
 
           <Form.Check

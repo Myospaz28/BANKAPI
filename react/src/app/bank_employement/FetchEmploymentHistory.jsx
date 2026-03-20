@@ -120,7 +120,7 @@ export default function FetchEmploymentHistory() {
   };
 
   /* ================= PDF ================= */
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const requestId = result?.request_id || "-";
@@ -169,7 +169,110 @@ export default function FetchEmploymentHistory() {
 
     pdfMake.createPdf(doc).download(`Employment_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
 
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+  const employmentData = result?.data?.employment_data || [];
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "section",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ⭐ build employment blocks */
+  const buildEmploymentBlocks = () => {
+    const content = [];
+
+    if (!employmentData.length) {
+      content.push({
+        text: "No Employment Records Found",
+        margin: [0, 10],
+      });
+      return content;
+    }
+
+    employmentData.forEach((emp, i) => {
+      const rows = Object.entries(emp).map(([k, v]) => [
+        k
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase()),
+        v,
+      ]);
+
+      content.push(section(`Employment Record ${i + 1}`));
+      content.push(twoCol(rows));
+    });
+
+    return content;
+  };
+
+  const doc = {
+    pageSize: "A4",
+    pageOrientation: "portrait",
+    pageMargins: [30, 40, 30, 40],
+
+    content: [
+      { text: "Employment History Report", style: "header" },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      {
+        qr: requestId !== "-" ? requestId : "EMPLOYMENT",
+        fit: 70,
+        alignment: "right",
+        margin: [0, 10],
+      },
+
+      { text: "Employment Records", style: "section" },
+
+      ...buildEmploymentBlocks(),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 0, 0, 10],
+      },
+      section: {
+        fontSize: 14,
+        bold: true,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`Employment_${fileNo}.pdf`);
+};
   const code = result?.data?.code;
   const badgeVariant =
     code === "1013"

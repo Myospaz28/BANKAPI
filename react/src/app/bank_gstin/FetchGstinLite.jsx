@@ -549,7 +549,7 @@ export default function FetchGstinLite() {
   };
 
   /* ================= PDF ================= */
- const exportPdf = () => {
+ const exportPdf1 = () => {
   if (!result) return;
 
   const transactionId = result?.transaction_id || "-";
@@ -728,7 +728,156 @@ export default function FetchGstinLite() {
 
   pdfMake.createPdf(doc).download(`GSTIN_LITE_${fileNo}.pdf`);
 };
+const exportPdf = () => {
+  if (!result) return;
 
+  const transactionId = result?.transaction_id || "-";
+  const requestId = result?.request_id || "-";
+  const timestamp = result?.timestamp || "-";
+  const path = result?.path || "-";
+
+  const gstData = result?.data?.gstin_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : v;
+
+  /* ⭐ dynamic recursive renderer */
+  const renderDynamic = (obj, title = null) => {
+    let content = [];
+
+    if (title) {
+      content.push({
+        text: title,
+        style: "section",
+        margin: [0, 14, 0, 6],
+      });
+    }
+
+    Object.entries(obj || {}).forEach(([key, value]) => {
+      const label = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      /* ===== ARRAY ===== */
+      if (Array.isArray(value)) {
+        if (!value.length) return;
+
+        /* array of objects → table */
+        if (typeof value[0] === "object") {
+          const headers = Object.keys(value[0]);
+
+          content.push({
+            text: label,
+            bold: true,
+            margin: [0, 8, 0, 3],
+          });
+
+          content.push({
+            table: {
+              headerRows: 1,
+              widths: headers.map(() => "*"),
+              body: [
+                headers.map((h) => ({
+                  text: h
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase()),
+                  bold: true,
+                })),
+                ...value.map((row) =>
+                  headers.map((h) => safe(row[h]))
+                ),
+              ],
+            },
+            layout: "lightHorizontalLines",
+          });
+        } else {
+          /* array of string → bullet */
+          content.push({
+            text: label,
+            bold: true,
+            margin: [0, 8, 0, 3],
+          });
+
+          content.push({
+            ul: value.map((v) => safe(v)),
+          });
+        }
+      }
+
+      /* ===== OBJECT ===== */
+      else if (typeof value === "object" && value !== null) {
+        content = content.concat(renderDynamic(value, label));
+      }
+
+      /* ===== PRIMITIVE ===== */
+      else {
+        content.push({
+          table: {
+            widths: ["40%", "60%"],
+            body: [
+              [
+                { text: label, bold: true },
+                safe(value),
+              ],
+            ],
+          },
+          layout: "lightHorizontalLines",
+          margin: [0, 0, 0, 6],
+        });
+      }
+    });
+
+    return content;
+  };
+
+  const doc = {
+    content: [
+      { text: "GSTIN Lite Report", style: "header" },
+
+      {
+        table: {
+          widths: ["40%", "60%"],
+          body: [
+            ["File Number", fileNo],
+            ["GSTIN", gstin],
+            ["Transaction ID", transactionId],
+            ["Request ID", requestId],
+            ["Timestamp", timestamp],
+            ["API Path", path],
+          ].map((r) => [
+            { text: r[0], bold: true },
+            safe(r[1]),
+          ]),
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 10],
+      },
+
+      { qr: transactionId, fit: 80, alignment: "right", margin: [0, 10] },
+
+      /* ⭐ FULL GST DATA AUTO */
+      ...renderDynamic(gstData, "GST Details"),
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 0, 0, 15],
+      },
+      section: {
+        fontSize: 14,
+        bold: true,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 9,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`GSTIN_LITE_${fileNo}.pdf`);
+};
 
   const code = result?.data?.code;
 

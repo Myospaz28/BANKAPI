@@ -18,12 +18,14 @@
 // });
 
 // export default api;
+
+
+
 import axios from "axios";
 
-
 const api = axios.create({
-  // baseURL: "http://localhost:5000/",
-  baseURL: "https://api.risqcorporate.com/",
+  baseURL: "http://localhost:5000/",
+  // baseURL: "https://api.risqcorporate.com/",
 });
 
 
@@ -55,7 +57,6 @@ const fetchLocation = () =>
       }
     );
   });
-
 
 api.interceptors.request.use(
   async (config) => {
@@ -108,4 +109,5 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default api;        
+

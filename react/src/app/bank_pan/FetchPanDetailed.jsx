@@ -138,85 +138,203 @@ export default function FetchPanDetailed() {
   };
 
   /* ================= PDF ================= */
-  const exportPdf = () => {
-    const d = result?.data?.pan_data;
-    if (!d) return;
+const exportPdf1 = () => {
+  const d = result?.data?.pan_data;
+  if (!d) return;
 
-    const requestId = result?.request_id || "-";
-    const transactionId = result?.transaction_id || "-";
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
 
-    const safe = (v) => (v && v !== "" ? v : "-");
+  const safe = (v) => (v && v !== "" ? v : "-");
 
-    const docDefinition = {
-      pageSize: "A4",
-      pageMargins: [40, 60, 40, 60],
+  const fullName =
+    `${safe(d.first_name)} ${safe(d.last_name)}`.trim();
 
-      content: [
-        /* ===== HEADER ===== */
-        {
-          text: "PAN DETAILED REPORT",
-          style: "header",
-        },
+  const address = d.address_data
+    ? `${safe(d.address_data.line_1)}, ${safe(
+        d.address_data.line_2
+      )}, ${safe(d.address_data.city)} - ${safe(
+        d.address_data.pincode
+      )}`
+    : "-";
 
-        /* ===== REQUEST + TRANSACTION + QR ===== */
-        {
-          columns: [
-            {
-              width: "*",
-              stack: [
-                { text: `Request ID: ${requestId}`, margin: [0, 10, 0, 5] },
-                { text: `Transaction ID: ${transactionId}` },
-              ],
-            },
-            {
-              width: "auto",
-              qr: transactionId !== "-" ? transactionId : requestId,
-              fit: 90,
-              alignment: "right",
-            },
-          ],
-        },
+  const docDefinition = {
+    pageSize: "A4",
+    pageMargins: [40, 60, 40, 60],
 
-        { text: "\n" },
+    content: [
+      /* ===== HEADER ===== */
+      {
+        text: "PAN DETAILED REPORT",
+        style: "header",
+      },
 
-        /* ===== TABLE ===== */
-        {
-          table: {
-            widths: ["35%", "65%"],
-            body: [
-              ["PAN Number", safe(d.document_id)],
-              ["Full Name", safe(d.name)],
-              ["Category", safe(d.category)],
-              ["DOB", safe(d.date_of_birth)],
-              ["File Number", fileNo || "-"],
-              ["Generated On", new Date().toLocaleString()],
+      /* ===== REQUEST + TRANSACTION + QR ===== */
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: `Request ID: ${requestId}`, margin: [0, 10, 0, 5] },
+              { text: `Transaction ID: ${transactionId}` },
             ],
           },
-          layout: "lightHorizontalLines",
-        },
-
-        {
-          text: "\n\nThis document contains a QR code for verification.",
-          fontSize: 8,
-          italics: true,
-          color: "gray",
-        },
-      ],
-
-      styles: {
-        header: {
-          fontSize: 18,
-          bold: true,
-          marginBottom: 5,
-        },
+          {
+            width: "auto",
+            qr: transactionId !== "-" ? transactionId : requestId,
+            fit: 90,
+            alignment: "right",
+          },
+        ],
       },
-    };
 
-    pdfMake
-      .createPdf(docDefinition)
-      .download(`PAN_DETAILED_${fileNo || "Report"}.pdf`);
+      { text: "\n" },
+
+      /* ===== PAN DETAILS TABLE ===== */
+      {
+        table: {
+          widths: ["40%", "60%"],
+          body: [
+            ["PAN Number", safe(d.document_id)],
+            ["Full Name", fullName],
+            ["First Name", safe(d.first_name)],
+            ["Last Name", safe(d.last_name)],
+            ["Gender", safe(d.gender)],
+            ["Category", safe(d.category)],
+            ["Date of Birth", safe(d.date_of_birth)],
+            ["Email", safe(d.email)],
+            ["Document Type", safe(d.document_type)],
+            ["Aadhaar Linked", d.aadhaar_linked ? "Yes" : "No"],
+            ["Masked Aadhaar", safe(d.masked_aadhaar_number)],
+
+            /* ===== ADDRESS ===== */
+            ["Address", address],
+
+          ],
+        },
+        layout: "lightHorizontalLines",
+      },
+
+    
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        marginBottom: 5,
+      },
+    },
   };
-  const panData = result?.data?.pan_data;
+
+  pdfMake
+    .createPdf(docDefinition)
+    .download(`PAN_DETAILED_${fileNo || "Report"}.pdf`);
+}; 
+const exportPdf = () => {
+  const root = result?.data;
+  const d = root?.pan_data;
+  if (!d) return;
+
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : v;
+
+  /* ⭐ BUILD ADDRESS DYNAMICALLY */
+  const address =
+    d?.address_data && Object.keys(d.address_data).length
+      ? Object.values(d.address_data)
+          .filter((x) => x && x !== "")
+          .join(", ")
+      : "-";
+
+  const docDefinition = {
+    pageSize: "A4",
+    pageMargins: [40, 60, 40, 60],
+
+    content: [
+      /* ===== HEADER ===== */
+      {
+        text: "PAN DETAILED REPORT",
+        style: "header",
+      },
+
+      /* ===== REQUEST + TRANSACTION + QR ===== */
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: `File Number: ${fileNo || "-"}`,
+                margin: [0, 10, 0, 5],
+              },
+              { text: `Request ID: ${requestId}` },
+              { text: `Transaction ID: ${transactionId}` },
+            ],
+          },
+          {
+            width: "auto",
+            qr:
+              transactionId !== "-"
+                ? transactionId
+                : requestId,
+            fit: 90,
+            alignment: "right",
+          },
+        ],
+      },
+
+      { text: "\n" },
+
+      /* ===== PAN DETAILS ===== */
+      {
+        table: {
+          widths: ["40%", "60%"],
+          body: [
+            ["PAN Number", safe(d.document_id)],
+            ["Full Name", safe(d.name)],
+            ["First Name", safe(d.first_name)],
+            ["Middle Name", safe(d.middle_name)],
+            ["Last Name", safe(d.last_name)],
+            ["Document ID", safe(d.document_id)],
+            ["Gender", safe(d.gender)],
+            ["Category", safe(d.category)],
+            ["Date of Birth", safe(d.date_of_birth)],
+            ["Document Type", safe(d.document_type)],
+            ["Aadhaar Linked", d.aadhaar_linked ? "Yes" : "No"],
+            ["Masked Aadhaar", safe(d.masked_aadhaar_number)],
+            ["Email", safe(d.email)],
+
+            /* ⭐ ADDRESS FULL */
+            ["Address", address],
+          ],
+        },
+        layout: "lightHorizontalLines",
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+        marginBottom: 5,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake
+    .createPdf(docDefinition)
+    .download(`PAN_DETAILED_${fileNo || "REPORT"}.pdf`);
+};
+
+const panData = result?.data?.pan_data;
   const code = result?.data?.code;
   const badgeVariant = code === "1000" ? "success" : "secondary";
 

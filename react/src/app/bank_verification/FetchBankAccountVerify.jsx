@@ -131,7 +131,7 @@ export default function FetchBankAccountVerify() {
   };
 
   /* ================= PDF EXPORT ================= */
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const bank = result?.data?.bank_account_data || {};
@@ -200,7 +200,102 @@ export default function FetchBankAccountVerify() {
 
     pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
 
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const data = result?.data || {};
+  const bank = data?.bank_account_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "sub",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  /* ⭐ dynamic bank rows */
+  const bankRows = Object.entries(bank).map(([k, v]) => [
+    k.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+    v,
+  ]);
+
+  /* ⭐ append input fields also */
+  bankRows.push(["Account Number", accountNumber]);
+  bankRows.push(["IFSC", ifsc]);
+
+  const doc = {
+    pageSize: "A4",
+    pageOrientation: "portrait",
+    pageMargins: [40, 60, 40, 60],
+
+    content: [
+      {
+        text: "Bank Account Verification Report",
+        style: "header",
+      },
+
+      { text: `File Number: ${fileNo}` },
+      { text: `Request ID: ${requestId}` },
+      { text: `Transaction ID: ${transactionId}` },
+
+      {
+        qr: requestId !== "-" ? requestId : "BANK-VERIFY",
+        fit: 70,
+        alignment: "right",
+        margin: [0, 10],
+      },
+
+      section("Status Details"),
+      twoCol([
+        ["Status Code", data?.code],
+        ["Message", data?.message],
+      ]),
+
+      section("Bank Details"),
+      twoCol(bankRows),
+
+      {
+        text: `Generated On: ${new Date().toLocaleString()}`,
+        margin: [0, 15],
+        italics: true,
+        fontSize: 9,
+      },
+    ],
+
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+      },
+      sub: {
+        fontSize: 14,
+        bold: true,
+      },
+    },
+
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`Bank_Verification_${fileNo}.pdf`);
+};
   const code = result?.data?.code;
   const badgeVariant = code === "1000" ? "success" : "warning";
 

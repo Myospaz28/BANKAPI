@@ -140,64 +140,8 @@ export default function FetchVerifyIfsc() {
     }
   };
 
-  /* ================= PDF EXPORT ================= */
-  // const exportPdf = () => {
-  //   const bank = result?.data?.bank_ifsc_data;
-  //   if (!bank) return;
 
-  //   const doc = {
-  //     content: [
-  //       { text: "IFSC Verification Report", style: "header" },
-
-  //       {
-  //         table: {
-  //           widths: ["40%", "60%"],
-  //           body: [
-  //             ["Service Name", service_name],
-  //             ["File Number", fileNo],
-  //             ["Credits Used", credits],
-  //           ],
-  //         },
-  //         layout: "lightHorizontalLines",
-  //         margin: [0, 10],
-  //       },
-
-  //       { text: "IFSC Details", style: "sub" },
-
-  //       {
-  //         table: {
-  //           widths: ["40%", "60%"],
-  //           body: [
-  //             ["IFSC Code", val(bank.ifsc_code)],
-  //             ["Bank Name", val(bank.bank_name)],
-  //             ["Branch", val(bank.branch_name)],
-  //             ["Address", val(bank.address)],
-  //             ["City", val(bank.city)],
-  //             ["State", val(bank.state)],
-  //             ["MICR Code", val(bank.micr_code)],
-  //             ["NEFT", val(bank.payment_channels?.neft)],
-  //             ["IMPS", val(bank.payment_channels?.imps)],
-  //             ["RTGS", val(bank.payment_channels?.rtgs)],
-  //             ["UPI", val(bank.payment_channels?.upi)],
-  //           ],
-  //         },
-  //         layout: "lightHorizontalLines",
-  //         margin: [0, 10],
-  //       },
-
-  //       { text: "Full API Response", style: "sub", margin: [0, 10] },
-  //       { text: JSON.stringify(result, null, 2), fontSize: 8 },
-  //     ],
-  //     styles: {
-  //       header: { fontSize: 18, bold: true },
-  //       sub: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
-  //     },
-  //   };
-
-  //   pdfMake.createPdf(doc).download(`IFSC_Verification_${fileNo}.pdf`);
-  // };
-
-  const exportPdf = () => {
+  const exportPdf1 = () => {
     if (!result) return;
 
     const bank = result?.data?.bank_ifsc_data || {};
@@ -267,6 +211,108 @@ export default function FetchVerifyIfsc() {
 
     pdfMake.createPdf(doc).download(`IFSC_Verification_${fileNo}.pdf`);
   };
+const exportPdf = () => {
+  if (!result) return;
+
+  const requestId = result?.request_id || "-";
+  const transactionId = result?.transaction_id || "-";
+
+  const data = result?.data || {};
+  const bank = data?.bank_ifsc_data || {};
+
+  const safe = (v) =>
+    v === undefined || v === null || v === "" ? "-" : String(v);
+
+  const section = (title) => ({
+    text: title,
+    style: "sub",
+    margin: [0, 12, 0, 6],
+  });
+
+  const twoCol = (rows) => ({
+    table: {
+      widths: ["45%", "55%"],
+      body: rows.map(([k, v]) => [
+        { text: k, bold: true },
+        safe(v),
+      ]),
+    },
+    layout: "lightHorizontalLines",
+  });
+
+  const content = [
+    {
+      text: "IFSC Verification Report",
+      style: "header",
+    },
+
+    { text: `File Number: ${fileNo}` },
+    { text: `Request ID: ${requestId}` },
+    { text: `Transaction ID: ${transactionId}` },
+
+    {
+      qr: requestId !== "-" ? requestId : "IFSC-VERIFICATION",
+      fit: 70,
+      alignment: "right",
+      margin: [0, 10],
+    },
+
+    section("Status Details"),
+    twoCol([
+      ["Status Code", data?.code],
+      ["Message", data?.message],
+    ]),
+  ];
+
+  /* 🔹 dynamically process IFSC data */
+  Object.entries(bank).forEach(([key, value]) => {
+    const label = key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      content.push(section(label));
+      content.push(
+        twoCol(
+          Object.entries(value).map(([k, v]) => [
+            k
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (l) => l.toUpperCase()),
+            v,
+          ])
+        )
+      );
+    } else {
+      content.push(
+        twoCol([
+          [label, value],
+        ])
+      );
+    }
+  });
+
+  content.push({
+    text: `Generated On: ${new Date().toLocaleString()}`,
+    margin: [0, 15],
+    italics: true,
+    fontSize: 9,
+  });
+
+  const doc = {
+    pageSize: "A4",
+    pageMargins: [40, 60, 40, 60],
+    content,
+    styles: {
+      header: { fontSize: 18, bold: true },
+      sub: { fontSize: 14, bold: true },
+    },
+    defaultStyle: {
+      fontSize: 10,
+    },
+  };
+
+  pdfMake.createPdf(doc).download(`IFSC_Verification_${fileNo}.pdf`);
+};
 
   const code = result?.data?.code;
   const badgeVariant = code === "1041" ? "success" : "warning";
